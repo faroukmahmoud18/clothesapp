@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 // Removed PlusCircleIcon, PercentIcon from lucide-react import
 // Added BarcodeIcon
 import { SearchIcon, UserCircle2Icon, Settings2Icon, DollarSignIcon, Trash2Icon, PlusIcon, MinusIcon, TagIcon, Barcode as BarcodeIcon } from 'lucide-react';
-import { mockProducts } from '@/pos/mockData';
+// Remove direct import of mockProducts
 import { Product, PaymentMethod } from '@/pos/types'; // Added PaymentMethod
+import * as syncService from '@/sync/syncService'; // Import syncService
 import { useCartStore, CartItem, DiscountType } from '@/store/cartStore'; // Import cart store and DiscountType
 // Removed DialogTrigger from dialog import
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -88,7 +89,11 @@ const POSPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [barcodeInputValue, setBarcodeInputValue] = React.useState('');
   const barcodeInputRef = React.useRef<HTMLInputElement>(null);
-  const [searchResults, setSearchResults] = React.useState<Product[]>(mockProducts);
+
+  const [allProducts, setAllProducts] = React.useState<Product[]>([]); // Holds all fetched products
+  const [searchResults, setSearchResults] = React.useState<Product[]>([]); // For display, filtered from allProducts
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   // Cart store integration
   const cartItems = useCartStore((state) => state.items);
@@ -117,20 +122,41 @@ const POSPage: React.FC = () => {
   const clearCart = useCartStore((state) => state.clearCart);
 
 
-  // Product search logic
+  // Fetch all products on component mount
   React.useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setSearchResults(mockProducts);
-    } else {
-      const lowercasedFilter = searchTerm.toLowerCase();
-      const filtered = mockProducts.filter(product =>
-        product.name.toLowerCase().includes(lowercasedFilter) ||
-        product.sku.toLowerCase().includes(lowercasedFilter) ||
-        (product.barcode && product.barcode.toLowerCase().includes(lowercasedFilter))
-      );
-      setSearchResults(filtered);
+    const fetchProductsData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedProducts = await syncService.getProducts();
+        setAllProducts(fetchedProducts);
+        setSearchResults(fetchedProducts); // Initially, search results show all products
+      } catch (err) {
+        console.error("POSPage: Failed to fetch products:", err);
+        setError(t('failedToLoadProducts')); // Ensure this translation exists
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProductsData();
+  }, [t]);
+
+  // Product search logic - now filters allProducts
+  React.useEffect(() => {
+    if (!isLoading) { // Only filter if not loading and allProducts is populated
+      if (searchTerm.trim() === '') {
+        setSearchResults(allProducts);
+      } else {
+        const lowercasedFilter = searchTerm.toLowerCase();
+        const filtered = allProducts.filter(product =>
+          product.name.toLowerCase().includes(lowercasedFilter) ||
+          product.sku.toLowerCase().includes(lowercasedFilter) ||
+          (product.barcode && product.barcode.toLowerCase().includes(lowercasedFilter))
+        );
+        setSearchResults(filtered);
+      }
     }
-  }, [searchTerm]);
+  }, [searchTerm, allProducts, isLoading]);
 
   const handleAddToCart = (product: Product) => {
     addItemToCart(product, 1); // Add 1 quantity by default
@@ -138,15 +164,16 @@ const POSPage: React.FC = () => {
 
   // Auto-focus barcode input on mount and after cart clear
   React.useEffect(() => {
-    barcodeInputRef.current?.focus();
-  }, [cartItems.length === 0]); // Re-focus when cart becomes empty (e.g. after a sale)
+    if (!isLoading) { // Also ensure not loading before focusing
+      barcodeInputRef.current?.focus();
+    }
+  }, [cartItems.length === 0, isLoading]);
 
   const handleBarcodeScan = () => {
     if (!barcodeInputValue.trim()) return;
 
     const scannedBarcode = barcodeInputValue.trim();
-    // Use mockProducts directly as it's the source of truth for all available products
-    const productFound = mockProducts.find(p => p.barcode === scannedBarcode);
+    const productFound = allProducts.find(p => p.barcode === scannedBarcode); // Search in allProducts
 
     if (productFound) {
       addItemToCart(productFound, 1); // addItemToCart handles existing items by incrementing quantity
@@ -159,6 +186,15 @@ const POSPage: React.FC = () => {
     }
     barcodeInputRef.current?.focus(); // Always refocus after attempting a scan
   };
+
+  // Basic loading and error display for POSPage product fetching
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">{t('loadingProducts')}...</div>; // Ensure translation exists
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-destructive">{error}</div>;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-muted/40 p-4 gap-4">
