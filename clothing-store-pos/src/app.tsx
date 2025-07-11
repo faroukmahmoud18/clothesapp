@@ -4,17 +4,13 @@ import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18next
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
-import POSPage from '@/pages/POSPage'; // Import POSPage from its new file
+import POSPage from '@/pages/POSPage';
+import InventoryPage from '@/pages/InventoryPage'; // Import InventoryPage from its new file
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
 
-// Placeholder for Inventory page, POSPage is now in its own file
-const InventoryPage = () => {
-  const { t } = useTranslation();
-  return <div className="p-4"> <h2 className="text-xl font-semibold">{t('inventoryPage')}</h2> <p>Welcome to Inventory Management.</p> </div>;
-};
-
+// InventoryPage is now in its own file. This placeholder can be removed.
 
 // A simple layout component to conditionally show nav
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
