@@ -231,6 +231,76 @@ export const addLoyaltyPointsForSale = async (customerId: string, saleAmount: nu
   }
 };
 
+export const addProductsBatch = async (
+  productsData: Array<Omit<Product, 'id' | 'branchId'> & { branchId?: string }>
+): Promise<{ successCount: number; errorCount: number; errors: Array<{ productData: any; error: string }> }> => {
+  console.log(`[SyncService] addProductsBatch initiated with ${productsData.length} products.`);
+  const results = { successCount: 0, errorCount: 0, errors: [] as Array<{ productData: any; error: string }> };
+
+  const productsToInsert: Product[] = productsData.map(pd => ({
+    ...pd,
+    id: uuidv4(), // Generate local ID
+    branchId: pd.branchId || 'branch_001', // Default branch or ensure it's provided
+    category: pd.category || 'Uncategorized',
+    purchasePrice: pd.purchasePrice || 0,
+    sellingPrice: pd.sellingPrice || 0, // Should be required by validation though
+    stockQuantity: pd.stockQuantity || 0,
+    // Ensure all required Product fields have defaults if not in Omit type
+    name: pd.name || 'Unnamed Product', // Should be required by validation
+    sku: pd.sku || `SKU-${Date.now()}-${Math.random()}`, // Should be required & unique
+  }));
+
+  try {
+    productRepository.dbUpsertProductsBatch(productsToInsert); // This handles individual errors by logging them
+    results.successCount = productsToInsert.length; // Assume all DB inserts are successful for now with upsert
+    console.log(`[SyncService] Batch of ${productsToInsert.length} products upserted to local DB.`);
+
+    // Async API call for the batch
+    // mockApi.createProductsBatch is designed to take Omit<Product, 'id' | 'branchId'>[]
+    // We need to pass the original productsData or strip IDs from productsToInsert
+    mockApi.createProductsBatch(productsData)
+      .then(apiResult => {
+        console.log('[SyncService] API createProductsBatch finished:', apiResult);
+        if (apiResult.errorCount > 0) {
+          // Handle partial failures from API batch: queue only the failed ones
+          apiResult.results.forEach(async (itemOrError) => {
+            if ('error' in itemOrError) { // Type guard for error object
+              const originalFailedData = itemOrError.data as Omit<Product, 'id' | 'branchId'>;
+              // Find the corresponding locally saved product to get its local ID for the queue
+              const locallySavedProduct = productsToInsert.find(p => p.sku === originalFailedData.sku); // Assuming SKU is a good enough match here
+              if (locallySavedProduct) {
+                console.warn(`[SyncService] API createProductsBatch item failed for SKU ${originalFailedData.sku}, adding to queue.`);
+                try {
+                  await syncQueueManager.addToQueue('CREATE_PRODUCT', locallySavedProduct, locallySavedProduct.id);
+                } catch (qErr) {
+                  console.error(`[SyncService] Failed to add failed batch item (SKU: ${originalFailedData.sku}) to queue:`, qErr);
+                }
+              }
+            }
+          });
+        }
+      })
+      .catch(async (batchErr) => { // If the whole batch API call fails
+        console.error('[SyncService] API createProductsBatch error, adding all items to queue:', batchErr);
+        for (const product of productsToInsert) {
+          try {
+            await syncQueueManager.addToQueue('CREATE_PRODUCT', product, product.id);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add product (ID: ${product.id}) from failed batch to queue:`, qErr);
+          }
+        }
+      });
+
+  } catch (dbError) {
+    console.error('[SyncService] Error batch saving products to local DB:', dbError);
+    results.errorCount = productsData.length; // All failed if DB batch fails
+    productsData.forEach(pd => results.errors.push({productData: pd, error: (dbError as Error).message || "DB batch save error"}));
+    // Do not attempt API call if DB save failed
+  }
+  return results;
+};
+
+
 export const addProduct = async (productData: Omit<Product, 'id' | 'branchId'> & { branchId?: string }): Promise<Product> => {
   console.log('[SyncService] addProduct initiated with data:', productData);
 
