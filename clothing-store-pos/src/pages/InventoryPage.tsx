@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, TriangleAlertIcon } from 'lucide-react'; // Added TriangleAlertIcon
-import { mockProducts, mockProductTypes } from '@/pos/mockData'; // Import mockProductTypes
+// Remove direct import of mockProducts, will be fetched via service
+import { mockProductTypes } from '@/pos/mockData'; // Keep mockProductTypes for form dropdown for now
 import { Product, ProductType } from '@/pos/types'; // Import ProductType
+import * as syncService from '@/sync/syncService'; // Import syncService
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Dialog components
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
@@ -133,7 +135,9 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
 const InventoryPage: React.FC = () => {
   const { t } = useTranslation();
 
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]); // Initialize with empty array
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [error, setError] = useState<string | null>(null); // Add error state
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -163,6 +167,31 @@ const InventoryPage: React.FC = () => {
     setSearchTerm(event.target.value);
     setCurrentPage(1); // Reset to first page on new search
   };
+
+  useEffect(() => {
+    const fetchProductsData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedProducts = await syncService.getProducts();
+        setProducts(fetchedProducts);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+        setError(t('failedToLoadProducts')); // Add this translation
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProductsData();
+  }, [t]); // Added t to dependency array as it's used in setError
+
+  // Basic loading and error display
+  if (isLoading) {
+    return <div className="p-6">{t('loadingProducts')}</div>; // Add this translation
+  }
+  if (error) {
+    return <div className="p-6 text-destructive">{error}</div>;
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -247,9 +276,20 @@ const InventoryPage: React.FC = () => {
                     variant="ghost"
                     size="icon"
                     className="text-destructive hover:text-destructive/80 h-8 w-8"
-                    onClick={() => {
+                    onClick={async () => { // Make async
                       if (confirm(t('confirmDeleteProduct', { productName: product.name }))) {
-                        setProducts(prev => prev.filter(p => p.id !== product.id));
+                        try {
+                          const success = await syncService.removeProduct(product.id);
+                          if (success) {
+                            setProducts(prev => prev.filter(p => p.id !== product.id));
+                            // Optionally, add a success toast/notification
+                          } else {
+                            alert(t('failedToDeleteProduct')); // Add this translation
+                          }
+                        } catch (err) {
+                          console.error("Failed to delete product:", err);
+                          alert(t('failedToDeleteProduct'));
+                        }
                       }
                     }}
                   >
@@ -297,20 +337,35 @@ const InventoryPage: React.FC = () => {
       <ProductFormDialog
         isOpen={isProductFormOpen}
         setIsOpen={setIsProductFormOpen}
-        onSave={(productData) => {
-          if (productToEdit) { // Editing existing product
-            setProducts(prevProducts =>
-              prevProducts.map(p => p.id === productToEdit.id ? { ...p, ...productData } as Product : p)
-            );
-          } else { // Adding new product
-            const newProductWithId: Product = {
-              ...(productData as Omit<Product, 'id'>), // Ensure it's the Omit type for new
-              id: uuidv4(),
-            };
-            setProducts(prevProducts => [newProductWithId, ...prevProducts]);
+        onSave={async (productData) => { // Make async
+          try {
+            if (productToEdit) { // Editing existing product
+              const updatedProduct = await syncService.editProduct(productToEdit.id, productData as Partial<Product>); // Cast for partial update
+              if (updatedProduct) {
+                setProducts(prevProducts =>
+                  prevProducts.map(p => p.id === updatedProduct.id ? updatedProduct : p)
+                );
+                // Optionally, add a success toast/notification
+              } else {
+                alert(t('failedToUpdateProduct')); // Add this translation
+              }
+            } else { // Adding new product
+              // Ensure productData matches Omit<Product, 'id'>, might need to explicitly set branchId if not already there
+              const productPayload = productData as Omit<Product, 'id'>;
+              if (!productPayload.branchId) { // Example: ensure branchId is set if not done in form
+                  // const currentBranch = useAuthStore.getState().currentBranchId; // This is one way, or pass it down
+                  // For now, mockApi's createProduct has a default if not provided.
+              }
+              const newProduct = await syncService.addProduct(productPayload);
+              setProducts(prevProducts => [newProduct, ...prevProducts]);
+              // Optionally, add a success toast/notification
+            }
+            setProductToEdit(null);
+            setIsProductFormOpen(false); // Explicitly close dialog on successful save
+          } catch (err) {
+            console.error("Failed to save product:", err);
+            alert(t('failedToSaveProduct')); // Add this translation
           }
-          setProductToEdit(null); // Reset productToEdit after save
-          // In a real app, you'd also send this to a backend.
         }}
         productToEdit={productToEdit}
       />

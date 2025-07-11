@@ -108,7 +108,13 @@ const enTranslations = {
     // ViewProductDialog Barcode Generation
     generateBarcodeButton: "Generate Barcode",
     generatedBarcodeTitle: "Barcode for",
-    noBarcodeOrSku: "Product has no barcode or SKU to generate a barcode from."
+    noBarcodeOrSku: "Product has no barcode or SKU to generate a barcode from.",
+    // Sync Service related messages
+    failedToLoadProducts: "Failed to load products. Please try again later.",
+    loadingProducts: "Loading products...",
+    failedToDeleteProduct: "Failed to delete product. Please try again.",
+    failedToUpdateProduct: "Failed to update product. Please try again.",
+    failedToSaveProduct: "Failed to save product. Please try again."
     // Add more translations as needed
   },
 };
@@ -219,7 +225,13 @@ const arTranslations = {
     // ViewProductDialog Barcode Generation (Arabic)
     generateBarcodeButton: "إنشاء باركود",
     generatedBarcodeTitle: "باركود لـ",
-    noBarcodeOrSku: "لا يوجد باركود أو SKU للمنتج لإنشاء باركود منه."
+    noBarcodeOrSku: "لا يوجد باركود أو SKU للمنتج لإنشاء باركود منه.",
+    // Sync Service related messages (Arabic)
+    failedToLoadProducts: "فشل تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.",
+    loadingProducts: "جاري تحميل المنتجات...",
+    failedToDeleteProduct: "فشل حذف المنتج. يرجى المحاولة مرة أخرى.",
+    failedToUpdateProduct: "فشل تحديث المنتج. يرجى المحاولة مرة أخرى.",
+    failedToSaveProduct: "فشل حفظ المنتج. يرجى المحاولة مرة أخرى."
     // Add more translations as needed
   },
 };
