@@ -104,7 +104,11 @@ const enTranslations = {
     selectProductType: "Select Product Type...",
     productTaxRateOptional: "Product's Own Tax Rate (%) (Optional)",
     taxRatePlaceholder: "e.g., 14 for 14%",
-    taxRateNote: "Used if Product Type has no tax or no type is selected. Overridden by Product Type's tax."
+    taxRateNote: "Used if Product Type has no tax or no type is selected. Overridden by Product Type's tax.",
+    // ViewProductDialog Barcode Generation
+    generateBarcodeButton: "Generate Barcode",
+    generatedBarcodeTitle: "Barcode for",
+    noBarcodeOrSku: "Product has no barcode or SKU to generate a barcode from."
     // Add more translations as needed
   },
 };
@@ -211,7 +215,11 @@ const arTranslations = {
     selectProductType: "اختر نوع المنتج...",
     productTaxRateOptional: "نسبة ضريبة المنتج الخاصة (%) (اختياري)",
     taxRatePlaceholder: "مثال: 14 لـ 14%",
-    taxRateNote: "تُستخدم إذا لم يكن لنوع المنتج ضريبة أو لم يتم اختيار نوع. يتم تجاوزها بضريبة نوع المنتج."
+    taxRateNote: "تُستخدم إذا لم يكن لنوع المنتج ضريبة أو لم يتم اختيار نوع. يتم تجاوزها بضريبة نوع المنتج.",
+    // ViewProductDialog Barcode Generation (Arabic)
+    generateBarcodeButton: "إنشاء باركود",
+    generatedBarcodeTitle: "باركود لـ",
+    noBarcodeOrSku: "لا يوجد باركود أو SKU للمنتج لإنشاء باركود منه."
     // Add more translations as needed
   },
 };

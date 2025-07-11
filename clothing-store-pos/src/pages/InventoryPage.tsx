@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, TriangleAlertIcon } from 'lucide-react'; // Added TriangleAlertIcon
 import { mockProducts, mockProductTypes } from '@/pos/mockData'; // Import mockProductTypes
 import { Product, ProductType } from '@/pos/types'; // Import ProductType
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Dialog components
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
+import JsBarcode from 'jsbarcode'; // Import JsBarcode
+import { Barcode as BarcodeIconLucide } from 'lucide-react'; // For button icon
 
 const ITEMS_PER_PAGE = 10;
 
@@ -222,7 +224,12 @@ const InventoryPage: React.FC = () => {
                 <TableCell>{product.sku}</TableCell>
                 <TableCell>{product.category}</TableCell>
                 <TableCell className="text-right">{product.sellingPrice.toFixed(2)}</TableCell>
-                <TableCell className="text-center">{product.stockQuantity}</TableCell>
+                <TableCell className={`text-center ${product.stockQuantity <= (product.lowStockThreshold || 0) ? 'text-destructive font-semibold' : ''}`}>
+                  {product.stockQuantity}
+                  {product.stockQuantity <= (product.lowStockThreshold || 0) && (
+                    <TriangleAlertIcon className="inline-block ml-1 h-4 w-4 text-destructive" />
+                  )}
+                </TableCell>
                 <TableCell className="text-center">{product.lowStockThreshold || '-'}</TableCell>
                 <TableCell className="text-center">
                   <Button
@@ -325,8 +332,40 @@ interface ViewProductDialogProps {
 
 const ViewProductDialog: React.FC<ViewProductDialogProps> = ({ isOpen, setIsOpen, product }) => {
   const { t } = useTranslation();
+  const barcodeRef = React.useRef<SVGSVGElement>(null);
+  const [showBarcodeDisplay, setShowBarcodeDisplay] = useState(false);
+  const [barcodeValueToDisplay, setBarcodeValueToDisplay] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showBarcodeDisplay && barcodeValueToDisplay && barcodeRef.current) {
+      try {
+        JsBarcode(barcodeRef.current, barcodeValueToDisplay, {
+          format: "CODE128", // Standard barcode format
+          lineColor: "#000",
+          width: 2,
+          height: 100,
+          displayValue: true, // Show the value below the barcode
+          fontSize: 16,
+        });
+      } catch (e) {
+        console.error("JsBarcode error:", e);
+        // Handle error, e.g. show a message to the user
+      }
+    }
+  }, [showBarcodeDisplay, barcodeValueToDisplay]);
+
 
   if (!product) return null;
+
+  const handleGenerateBarcode = () => {
+    const valueToEncode = product.barcode || product.sku;
+    if (valueToEncode) {
+      setBarcodeValueToDisplay(valueToEncode);
+      setShowBarcodeDisplay(true);
+    } else {
+      alert(t('noBarcodeOrSku')); // Add this translation
+    }
+  };
 
   const detailItem = (labelKey: string, value?: string | number | null) => (
     value || value === 0 ? (
@@ -338,34 +377,57 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({ isOpen, setIsOpen
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('productDetailsTitle')}: {product.name}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4 space-y-3">
-          {product.imageUrl && (
-            <div className="flex justify-center mb-4">
-              <img src={product.imageUrl} alt={product.name} className="max-w-xs max-h-48 rounded-md object-contain border" />
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setShowBarcodeDisplay(false); }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('productDetailsTitle')}: {product.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            {product.imageUrl && (
+              <div className="flex justify-center mb-4">
+                <img src={product.imageUrl} alt={product.name} className="max-w-xs max-h-48 rounded-md object-contain border" />
+              </div>
+            )}
+            <dl>
+              {detailItem('productName', product.name)}
+              {detailItem('sku', product.sku)}
+              {detailItem('category', product.category)}
+              {detailItem('barcodeOptional', product.barcode)}
+              {detailItem('sellingPrice', `${t('currencyEGP')} ${product.sellingPrice.toFixed(2)}`)}
+              {detailItem('purchasePriceOptional', `${t('currencyEGP')} ${product.purchasePrice.toFixed(2)}`)}
+              {detailItem('stockQuantity', product.stockQuantity)}
+              {detailItem('lowStockThresholdOptional', product.lowStockThreshold)}
+              {detailItem('taxRatePercentage', product.taxRate)}
+            </dl>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleGenerateBarcode} className="mr-auto">
+              <BarcodeIconLucide className="mr-2 h-4 w-4" /> {t('generateBarcodeButton')} {/* Add translation */}
+            </Button>
+            <Button variant="outline" onClick={() => { setIsOpen(false); setShowBarcodeDisplay(false); }}>{t('close')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Display Dialog */}
+      {showBarcodeDisplay && barcodeValueToDisplay && (
+        <Dialog open={showBarcodeDisplay} onOpenChange={setShowBarcodeDisplay}>
+          <DialogContent className="sm:max-w-md items-center">
+            <DialogHeader>
+              <DialogTitle>{t('generatedBarcodeTitle')} {product.name}</DialogTitle> {/* Add translation */}
+            </DialogHeader>
+            <div className="p-4 flex justify-center">
+              <svg ref={barcodeRef}></svg>
             </div>
-          )}
-          <dl>
-            {detailItem('productName', product.name)}
-            {detailItem('sku', product.sku)}
-            {detailItem('category', product.category)}
-            {detailItem('barcodeOptional', product.barcode)}
-            {detailItem('sellingPrice', `${t('currencyEGP')} ${product.sellingPrice.toFixed(2)}`)}
-            {detailItem('purchasePriceOptional', `${t('currencyEGP')} ${product.purchasePrice.toFixed(2)}`)}
-            {detailItem('stockQuantity', product.stockQuantity)}
-            {detailItem('lowStockThresholdOptional', product.lowStockThreshold)}
-            {detailItem('taxRatePercentage', product.taxRate)}
-          </dl>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>{t('close')}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBarcodeDisplay(false)}>{t('close')}</Button>
+              {/* TODO: Add a print button here that triggers window.print() or a more specific print method */}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 };
 
