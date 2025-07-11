@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Clothing Store POS</title>
+    <!--
+      If you are serving your web app in a path other than /assets, change the CSP meta tag below to reflect
+      that path.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline' blob: filesystem:;"
+    />
+    <!--
+    Unlike the renderer process, web workers are not granted nodeIntegration nor nodeIntegrationInWorker.
+    Only a small subset of Electron modules are available, listed here:
+    https://www.electronjs.org/docs/latest/tutorial/multithreading
+    If you enable nodeIntegrationInWorker, you must be careful about the security implications.
+    If you are using a path other than /assets, change the CSP meta tag to reflect that path.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="worker-src 'self' blob: filesystem:;"
+    />
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

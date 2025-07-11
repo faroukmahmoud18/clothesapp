@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", // Updated for modern JS features
+    "useDefineForClassFields": true, // Recommended for modern TypeScript
+    "lib": ["ES2020", "DOM", "DOM.Iterable"], // Added DOM libs for React
+    "module": "ESNext", // Changed to ESNext for renderer, main can be CommonJS
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true, // Keeping this, good practice
+    "sourceMap": true,
+    "baseUrl": "./", // Base URL for path aliases
+    "outDir": "dist", // This is typically for the compiled output, not source structure
+    "moduleResolution": "bundler", // Or "node", "bundler" is more modern
+    "allowImportingTsExtensions": true, // If using .ts/.tsx in imports
+    "resolveJsonModule": true,
+    "isolatedModules": true, // Good practice with bundlers
+    "noEmit": true, // Important: `ts-loader` / webpack handles emit, not tsc directly for frontend code
+    "jsx": "react-jsx", // For React 17+ new JSX transform
+    "strict": true, // Enable all strict type-checking options
+    "paths": {
+      "@/*": ["./src/*"] // Path alias for Shadcn/ui
+    }
+  },
+  "include": ["src/**/*", ".electron-forge/**/*"], // Include src and electron-forge specific files
+  "references": [{ "path": "./tsconfig.node.json" }] // Separate config for main process if needed
+}
