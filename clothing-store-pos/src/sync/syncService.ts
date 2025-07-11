@@ -1,9 +1,17 @@
 // @/sync/syncService.ts
 
-import { Product, Invoice } from '@/pos/types';
+import { Product, Invoice, InvoiceItem } from '@/pos/types'; // Added InvoiceItem
 import * as mockApi from './mockApi'; // Import all exports from mockApi
 import * as productRepository from '@/db/productRepository'; // Import productRepository
 import * as invoiceRepository from '@/db/invoiceRepository'; // Import invoiceRepository
+import {
+  DailySalesReportData,
+  SalesSummaryReportData,
+  CurrentInventoryReportData,
+  SalesReportMetrics, // For internal use
+  PaymentMethodSummary,
+  // TopSellingProduct, // If we implement it
+} from '@/reports/types';
 import { v4 as uuidv4 } from 'uuid'; // For generating local IDs if needed
 
 // === Product Sync Services ===
@@ -172,3 +180,128 @@ export const getSalesHistory = async (params?: { branchId?: string; dateFrom?: s
 // - syncAllUnsyncedData()
 // - checkServerStatus()
 // - handleConflictResolution(localData, serverData)
+
+
+// === Reporting Services ===
+
+// Helper to get start and end of a given date string (YYYY-MM-DD)
+const getDayBoundaries = (dateStr: string): { startOfDay: string, endOfDay: string } => {
+    // Assuming dateStr is 'YYYY-MM-DD'
+    const startOfDay = new Date(`${dateStr}T00:00:00.000Z`).toISOString();
+    const endOfDay = new Date(`${dateStr}T23:59:59.999Z`).toISOString();
+    return { startOfDay, endOfDay };
+};
+
+export const getSalesSummaryReport = async (
+  dateFrom: string, // Expected format 'YYYY-MM-DD' or full ISO string
+  dateTo: string,   // Expected format 'YYYY-MM-DD' or full ISO string
+  branchId?: string
+): Promise<SalesSummaryReportData> => {
+  console.log(`[SyncService] getSalesSummaryReport initiated for ${dateFrom} - ${dateTo}, branch: ${branchId}`);
+
+  // Adjust dates to be full ISO strings if only date part is provided
+  const queryDateFrom = dateFrom.includes('T') ? dateFrom : getDayBoundaries(dateFrom).startOfDay;
+  const queryDateTo = dateTo.includes('T') ? dateTo : getDayBoundaries(dateTo).endOfDay;
+
+  try {
+    // 1. Get SQL aggregated data
+    const aggData = invoiceRepository.dbGetAggregatedSalesQuery(queryDateFrom, queryDateTo, branchId);
+
+    // 2. Fetch all invoices in range to calculate metrics not easily done in SQL (due to JSON items)
+    // We must ensure dbGetInvoices filters by status='completed' if aggData does
+    const relevantInvoices = invoiceRepository.dbGetInvoices({
+      dateFrom: queryDateFrom,
+      dateTo: queryDateTo,
+      branchId
+      // TODO: Ensure dbGetInvoices can filter by status or filter here:
+    }).filter(inv => inv.status === 'completed');
+
+    let totalItemsSold = 0;
+    let totalItemLevelDiscounts = 0;
+
+    relevantInvoices.forEach(invoice => {
+      invoice.items.forEach((item: InvoiceItem) => {
+        totalItemsSold += item.quantity;
+        totalItemLevelDiscounts += (item.discountAmount || 0);
+      });
+    });
+
+    const totalDiscounts = totalItemLevelDiscounts + aggData.sumInvoiceDiscountAmount;
+
+    // totalNetSales = sum of (invoice.subtotal - invoice.invoiceDiscountAmount)
+    // invoice.subtotal is sum of (item.lineTotal) which is (qty * price - itemDiscount)
+    // So, aggData.sumSubtotalBeforeInvoiceDiscount is SUM(invoice.subtotal which is post-item-discount)
+    // And aggData.sumInvoiceDiscountAmount is SUM(invoice.invoiceDiscountAmount)
+    // So, totalNetSales = aggData.sumSubtotalBeforeInvoiceDiscount - aggData.sumInvoiceDiscountAmount
+    const totalNetSales = aggData.sumSubtotalBeforeInvoiceDiscount - aggData.sumInvoiceDiscountAmount;
+
+
+    // 3. Get payment method breakdown
+    const paymentMethodBreakdown = invoiceRepository.dbGetSalesByPaymentMethodQuery(queryDateFrom, queryDateTo, branchId);
+
+    // 4. Assemble report
+    const reportData: SalesSummaryReportData = {
+      dateFrom: dateFrom, // Original dateFrom for display
+      dateTo: dateTo,     // Original dateTo for display
+      totalInvoices: aggData.totalInvoices,
+      totalItemsSold,
+      totalDiscounts,
+      totalTax: aggData.sumTaxTotal || 0,
+      totalNetSales: totalNetSales,
+      totalGrossSales: aggData.sumGrandTotal || 0,
+      paymentMethodBreakdown,
+      // topSellingProducts: [], // TODO if time permits or for next iteration
+    };
+    console.log('[SyncService] getSalesSummaryReport successful.');
+    return reportData;
+
+  } catch (error) {
+    console.error('[SyncService] Error in getSalesSummaryReport:', error);
+    throw error;
+  }
+};
+
+
+export const getDailySalesReport = async (
+  date: string, // YYYY-MM-DD
+  branchId?: string
+): Promise<DailySalesReportData> => {
+  console.log(`[SyncService] getDailySalesReport initiated for ${date}, branch: ${branchId}`);
+  const { startOfDay, endOfDay } = getDayBoundaries(date);
+
+  try {
+    const summaryReport = await getSalesSummaryReport(startOfDay, endOfDay, branchId);
+
+    const dailyReport: DailySalesReportData = {
+      date: date,
+      ...summaryReport, // Spread all metrics from summary
+    };
+    console.log('[SyncService] getDailySalesReport successful.');
+    return dailyReport;
+  } catch (error) {
+    console.error(`[SyncService] Error in getDailySalesReport for date ${date}:`, error);
+    throw error;
+  }
+};
+
+
+export const getCurrentInventoryReport = async (branchId?: string): Promise<CurrentInventoryReportData> => {
+  console.log(`[SyncService] getCurrentInventoryReport initiated, branch: ${branchId}`);
+  try {
+    const repoData = productRepository.dbGetInventoryReportData(branchId);
+    const reportData: CurrentInventoryReportData = {
+      generatedAt: new Date().toISOString(),
+      totalItems: repoData.totalItemsCount,
+      totalUniqueProducts: repoData.totalUniqueProducts,
+      overallTotalValueAtCost: repoData.overallTotalValueAtCost,
+      overallTotalValueAtSellingPrice: repoData.overallTotalValueAtSellingPrice,
+      items: repoData.items,
+      // lowStockItems: productRepository.dbGetLowStockItems(branchId) // Optionally include this
+    };
+    console.log('[SyncService] getCurrentInventoryReport successful.');
+    return reportData;
+  } catch (error) {
+    console.error('[SyncService] Error in getCurrentInventoryReport:', error);
+    throw error;
+  }
+};
