@@ -114,9 +114,31 @@ const enTranslations = {
     loadingProducts: "Loading products...",
     failedToDeleteProduct: "Failed to delete product. Please try again.",
     failedToUpdateProduct: "Failed to update product. Please try again.",
-    failedToSaveProduct: "Failed to save product. Please try again."
+    failedToSaveProduct: "Failed to save product. Please try again.",
     // Add more translations as needed
   },
+  receipt: { // Namespace for receipt-specific terms
+    storeName: "My Awesome Clothing Store",
+    thankYouMsg: "Thank you for your purchase!",
+    invoiceIdLabel: "Invoice ID:",
+    dateLabel: "Date:",
+    cashierLabel: "Cashier:",
+    branchLabel: "Branch:",
+    discountLabel: "Discount",
+    subtotalLabel: "Subtotal:",
+    invoiceDiscountLabel: "Invoice Discount:",
+    taxTotalLabel: "Tax:",
+    grandTotalLabel: "TOTAL:",
+    paymentMethodLabel: "Paid by",
+    changeDueLabel: "Change:",
+  },
+  printerErrors: { // Namespace for printer errors
+    noPrinterFoundError: "No ESC/POS printer found. Please check connections.",
+    printerConnectionError: "Could not connect to the printer. Please check power and USB connection.",
+    printerInitializationError: "Failed to initialize printer. Try reconnecting or restarting the application.",
+    printerNotReadyError: "Printer is not ready or not initialized. Please try initializing it or check its status.",
+    printingFailedError: "Printing failed. Please check the printer and try again.",
+  }
 };
 
 // Arabic translations
@@ -234,6 +256,28 @@ const arTranslations = {
     failedToSaveProduct: "فشل حفظ المنتج. يرجى المحاولة مرة أخرى."
     // Add more translations as needed
   },
+  receipt: { // Namespace for receipt-specific terms (Arabic)
+    storeName: "متجر ملابسي الرائع",
+    thankYouMsg: "شكراً لتسوقكم!",
+    invoiceIdLabel: "رقم الفاتورة:",
+    dateLabel: "التاريخ:",
+    cashierLabel: "الكاشير:",
+    branchLabel: "الفرع:",
+    discountLabel: "خصم",
+    subtotalLabel: "المجموع الفرعي:",
+    invoiceDiscountLabel: "خصم الفاتورة:",
+    taxTotalLabel: "الضريبة:",
+    grandTotalLabel: "الإجمالي:",
+    paymentMethodLabel: "مدفوع بواسطة",
+    changeDueLabel: "الباقي:",
+  },
+  printerErrors: { // Namespace for printer errors (Arabic)
+    noPrinterFoundError: "لم يتم العثور على طابعة ESC/POS. يرجى التحقق من التوصيلات.",
+    printerConnectionError: "تعذر الاتصال بالطابعة. يرجى التحقق من الطاقة وتوصيل USB.",
+    printerInitializationError: "فشل تهيئة الطابعة. حاول إعادة التوصيل أو إعادة تشغيل التطبيق.",
+    printerNotReadyError: "الطابعة ليست جاهزة أو لم تتم تهيئتها. يرجى محاولة تهيئتها أو التحقق من حالتها.",
+    printingFailedError: "فشلت الطباعة. يرجى التحقق من الطابعة والمحاولة مرة أخرى.",
+  }
 };
 
 i18n

@@ -25,6 +25,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
     "i18next": "^25.3.2",
     "i18next-browser-languagedetector": "^8.2.0",
     "jsbarcode": "^3.12.1",

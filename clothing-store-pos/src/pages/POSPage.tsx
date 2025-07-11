@@ -15,6 +15,8 @@ import { useCartStore, CartItem, DiscountType } from '@/store/cartStore'; // Imp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label"; // Assuming Label is already added
+import * as printerService from '@/printing/printerService'; // Import printer service
+import { useAuthStore } from '@/store/authStore'; // To get current user/branch if needed for invoice
 
 // DiscountDialog component (can be moved to a separate file later if it grows)
 interface DiscountDialogProps {
@@ -120,6 +122,9 @@ const POSPage: React.FC = () => {
   // State for Payment Dialog
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
   const clearCart = useCartStore((state) => state.clearCart);
+  const [printingStatus, setPrintingStatus] = React.useState<'idle' | 'printing' | 'success' | 'error'>('idle');
+  const currentUser = useAuthStore((state) => state.currentUser); // Get current user
+  const currentBranch = useAuthStore((state) => state.availableBranches.find(b => b.id === state.currentBranchId)); // Get current branch details
 
 
   // Fetch all products on component mount
@@ -381,9 +386,9 @@ const POSPage: React.FC = () => {
         isOpen={isPaymentDialogOpen}
         setIsOpen={setIsPaymentDialogOpen}
         totalAmount={grandTotal}
-        onConfirmPayment={(paymentDetails) => {
+        onConfirmPayment={async (paymentDetails) => { // Made async
           // Basic Invoice Generation
-          const invoice = {
+          const invoicePayload = { // Renamed to avoid conflict with Invoice type if imported directly
             id: `INV-${Date.now()}`, // Simple unique ID
             items: cartItems.map(item => ({
               productId: item.id,
@@ -408,16 +413,65 @@ const POSPage: React.FC = () => {
             amountPaid: paymentDetails.amountPaid,
             changeDue: paymentDetails.method === PaymentMethod.CASH && paymentDetails.tendered ? paymentDetails.tendered - grandTotal : 0,
             tenderedAmount: paymentDetails.tendered,
-            createdAt: new Date().toISOString(),
-            // cashierId: currentUser?.id, // Would come from authStore
-            // branchId: currentBranch?.id, // Would come from some global store/context
+            createdAt: new Date(), // Use Date object, printer service can format
+            cashierId: currentUser?.id,
+            branchId: currentBranch?.id,
+            // Required by Invoice type, ensure it's set
+            status: 'completed' as 'completed' | 'pending' | 'voided' | 'parked', // Cast to satisfy type for now
           };
-          console.log("Generated Invoice:", JSON.stringify(invoice, null, 2));
-          alert(t('saleCompletedSuccessfully') + `\nInvoice ID: ${invoice.id}`); // Simple feedback
+
+          // Attempt to save the sale via syncService (mocked for now)
+          try {
+            await syncService.submitSale(invoicePayload); // Does not return the payload currently
+            console.log("Sale submitted via syncService, Invoice Data:", JSON.stringify(invoicePayload, null, 2));
+          } catch (e) {
+            console.error("Failed to submit sale via syncService", e);
+            // Decide if this failure should prevent receipt printing or clearing cart
+          }
+
+          alert(t('saleCompletedSuccessfully') + `\nInvoice ID: ${invoicePayload.id}`); // Simple feedback
+
+          // Attempt to print receipt
+          setPrintingStatus('printing');
+          // TODO: Show "Printing..." message to user
+          try {
+            // Ensure printer is initialized before attempting to print
+            // This could be done once when the POS page loads or before opening payment dialog
+            // For simplicity here, let's assume printerService.initializePrinter() is called elsewhere or handles it.
+            // A more robust way:
+            // const printerReady = await printerService.initializePrinter();
+            // if (!printerReady) {
+            //   alert(t('printerErrors.printerNotReadyError'));
+            //   setPrintingStatus('error');
+            //   // Still clear cart and close dialog? Or allow retry?
+            //   clearCart();
+            //   setIsPaymentDialogOpen(false);
+            //   return;
+            // }
+
+            const printSuccess = await printerService.printReceipt(invoicePayload);
+            if (printSuccess) {
+              setPrintingStatus('success');
+              // TODO: Show "Receipt printed" message briefly
+            } else {
+              setPrintingStatus('error');
+              alert(t('printerErrors.printingFailedError')); // Generic error
+            }
+          } catch (error) {
+            console.error("Printing error:", error);
+            setPrintingStatus('error');
+            alert(t('printerErrors.printingFailedError'));
+          } finally {
+            // TODO: Reset printing status to 'idle' after a delay or user action for feedback messages
+            // setTimeout(() => setPrintingStatus('idle'), 3000);
+          }
+
           clearCart();
           setIsPaymentDialogOpen(false);
+          barcodeInputRef.current?.focus(); // Focus barcode input for next sale
         }}
       />
+      {/* TODO: Add a small UI element to display printingStatus feedback */}
     </div>
   );
 };
