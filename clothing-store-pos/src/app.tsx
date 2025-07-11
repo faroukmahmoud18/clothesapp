@@ -3,16 +3,13 @@ import { HashRouter as Router, Routes, Route, Link, Navigate, useNavigate } from
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18next
 import LoginPage from '@/pages/LoginPage';
-import UnauthorizedPage from '@/pages/UnauthorizedPage'; // Import the new page
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
+import POSPage from '@/pages/POSPage'; // Import POSPage from its new file
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
 
-// Placeholder pages for POS and Inventory (can be expanded later)
-const POSPage = () => {
-  const { t } = useTranslation();
-  return <div className="p-4"> <h2 className="text-xl font-semibold">{t('posPage')}</h2> <p>Welcome to the Point of Sale.</p> </div>;
-};
+// Placeholder for Inventory page, POSPage is now in its own file
 const InventoryPage = () => {
   const { t } = useTranslation();
   return <div className="p-4"> <h2 className="text-xl font-semibold">{t('inventoryPage')}</h2> <p>Welcome to Inventory Management.</p> </div>;
