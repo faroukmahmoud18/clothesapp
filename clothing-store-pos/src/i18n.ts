@@ -39,6 +39,8 @@ const enTranslations = {
     proceedToPayment: "Proceed to Payment",
     noProductsFound: "No products found matching your search.",
     currencyEGP: "EGP", // Or just use "ج.م" directly in Arabic file
+    scanBarcodePlaceholder: "Scan Barcode or Enter Code...",
+    productNotFoundWithBarcode: "Product not found with barcode: {{barcode}}",
     // Discount translations
     discountApplied: "discount applied",
     applyDiscountToItem: "Apply Discount to {{itemName}}",
@@ -59,6 +61,7 @@ const enTranslations = {
     totalDue: "Total Due",
     paymentMethodCash: "Cash",
     paymentMethodCard: "Card",
+    paymentMethodDeferred: "Deferred",
     amountTendered: "Amount Tendered",
     changeDue: "Change Due",
     confirmPayment: "Confirm Payment",
@@ -95,7 +98,13 @@ const enTranslations = {
     confirmDeleteProduct: "Are you sure you want to delete the product \"{{productName}}\"?",
     // View Product Details Dialog translations
     productDetailsTitle: "Product Details",
-    close: "Close"
+    close: "Close",
+    // Product Form Dialog specific for product type & tax
+    productType: "Product Type",
+    selectProductType: "Select Product Type...",
+    productTaxRateOptional: "Product's Own Tax Rate (%) (Optional)",
+    taxRatePlaceholder: "e.g., 14 for 14%",
+    taxRateNote: "Used if Product Type has no tax or no type is selected. Overridden by Product Type's tax."
     // Add more translations as needed
   },
 };
@@ -137,6 +146,8 @@ const arTranslations = {
     proceedToPayment: "الدفع",
     noProductsFound: "لم يتم العثور على منتجات تطابق بحثك.",
     currencyEGP: "ج.م",
+    scanBarcodePlaceholder: "امسح الباركود أو أدخل الرمز...",
+    productNotFoundWithBarcode: "لم يتم العثور على منتج بالباركود: {{barcode}}",
     // Discount translations (Arabic)
     discountApplied: "خصم مطبق",
     applyDiscountToItem: "تطبيق خصم على {{itemName}}",
@@ -157,6 +168,7 @@ const arTranslations = {
     totalDue: "المبلغ الإجمالي المستحق",
     paymentMethodCash: "نقداً",
     paymentMethodCard: "بطاقة",
+    paymentMethodDeferred: "آجل",
     amountTendered: "المبلغ المدفوع",
     changeDue: "الباقي",
     confirmPayment: "تأكيد الدفع",
@@ -193,7 +205,13 @@ const arTranslations = {
     confirmDeleteProduct: "هل أنت متأكد أنك تريد حذف المنتج \"{{productName}}\"؟",
     // View Product Details Dialog translations (Arabic)
     productDetailsTitle: "تفاصيل المنتج",
-    close: "إغلاق"
+    close: "إغلاق",
+    // Product Form Dialog specific for product type & tax (Arabic)
+    productType: "نوع المنتج",
+    selectProductType: "اختر نوع المنتج...",
+    productTaxRateOptional: "نسبة ضريبة المنتج الخاصة (%) (اختياري)",
+    taxRatePlaceholder: "مثال: 14 لـ 14%",
+    taxRateNote: "تُستخدم إذا لم يكن لنوع المنتج ضريبة أو لم يتم اختيار نوع. يتم تجاوزها بضريبة نوع المنتج."
     // Add more translations as needed
   },
 };
