@@ -62,6 +62,35 @@ export const deleteProduct = async (productId: string): Promise<boolean> => {
   return Promise.resolve(localMockProducts.length < initialLength);
 };
 
+export const createProductsBatch = async (productsData: Array<Omit<Product, 'id' | 'branchId'>>): Promise<{ successCount: number, errorCount: number, results: Array<Product | {error: string, data: any}> }> => {
+  await networkDelay(500 + productsData.length * 50); // Longer delay for batch
+  console.log('[MockAPI] createProductsBatch called with data count:', productsData.length);
+
+  const results: Array<Product | {error: string, data: any}> = [];
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const productData of productsData) {
+    // Simulate potential individual errors in a batch
+    if (productData.name && productData.name.toLowerCase().includes('fail_in_batch')) {
+      results.push({ error: "Simulated batch item failure for " + productData.name, data: productData });
+      errorCount++;
+      continue;
+    }
+    const newProduct: Product = {
+      ...productData,
+      id: uuidv4(),
+      branchId: productData.branchId || 'branch_001',
+    };
+    localMockProducts.push(newProduct);
+    results.push(newProduct);
+    successCount++;
+  }
+
+  console.log(`[MockAPI] createProductsBatch finished. Success: ${successCount}, Errors: ${errorCount}`);
+  return Promise.resolve({ successCount, errorCount, results });
+};
+
 
 // --- Sales API ---
 // For now, just a simple mock. In a real app, this would be much more complex.

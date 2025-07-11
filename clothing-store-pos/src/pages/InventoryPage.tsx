@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ProductImportDialog from '@/inventory/components/ProductImportDialog'; // Import the new dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, TriangleAlertIcon } from 'lucide-react'; // Added TriangleAlertIcon
 // Remove direct import of mockProducts, will be fetched via service
@@ -144,6 +145,7 @@ const InventoryPage: React.FC = () => {
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isViewDetailDialogOpen, setIsViewDetailDialogOpen] = useState(false);
   const [productToView, setProductToView] = useState<Product | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false); // State for import dialog
 
 
   // Filtered and paginated products
@@ -198,7 +200,7 @@ const InventoryPage: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('inventoryManagement')}</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => alert(t('featureComingSoon'))} >
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
             <UploadIcon className="mr-2 h-4 w-4" />
             {t('importProducts')}
           </Button>
@@ -373,6 +375,17 @@ const InventoryPage: React.FC = () => {
         isOpen={isViewDetailDialogOpen}
         setIsOpen={setIsViewDetailDialogOpen}
         product={productToView}
+      />
+      <ProductImportDialog
+        isOpen={isImportDialogOpen}
+        setIsOpen={setIsImportDialogOpen}
+        onImportCompleted={() => {
+          // Optionally, refresh product list after import
+          // For now, just log. A full refresh would call syncService.getProducts() again.
+          console.log("Product import process completed (or dialog closed).");
+          // To refresh: (would require making fetchProductsData accessible or refactoring)
+          // fetchProductsData();
+        }}
       />
     </div>
   );
