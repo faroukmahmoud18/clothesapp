@@ -182,3 +182,73 @@ export const dbDeleteProduct = (productId: string): boolean => {
 // It's assumed `product_types`, `suppliers`, `branches` tables are populated manually or by a different sync process for now.
 // Or, they could be synced along with products if product data from API includes full objects for these.
 // For simplicity, this milestone focuses on products and invoices being the primary synced entities.
+
+
+// === Reporting Functions for Products ===
+
+export interface InventoryReportItemData extends Product {
+  totalValueAtCost: number;
+  totalValueAtSellingPrice: number;
+}
+
+export interface InventoryReportSummary {
+  totalItemsCount: number; // Sum of all stockQuantities
+  totalUniqueProducts: number;
+  overallTotalValueAtCost: number;
+  overallTotalValueAtSellingPrice: number;
+  items: InventoryReportItemData[];
+}
+
+export const dbGetInventoryReportData = (branchId?: string): InventoryReportSummary => {
+  const db = getDb();
+  let query = 'SELECT * FROM products';
+  const params: any[] = [];
+  if (branchId) {
+    query += ' WHERE branchId = ?';
+    params.push(branchId);
+  }
+
+  const products: Product[] = db.prepare(query).all(...params).map(rowToProduct);
+
+  let totalItemsCount = 0;
+  let overallTotalValueAtCost = 0;
+  let overallTotalValueAtSellingPrice = 0;
+
+  const reportItems: InventoryReportItemData[] = products.map(p => {
+    const valueAtCost = p.stockQuantity * p.purchasePrice;
+    const valueAtSelling = p.stockQuantity * p.sellingPrice;
+
+    totalItemsCount += p.stockQuantity;
+    overallTotalValueAtCost += valueAtCost;
+    overallTotalValueAtSellingPrice += valueAtSelling;
+
+    return {
+      ...p,
+      totalValueAtCost: valueAtCost,
+      totalValueAtSellingPrice: valueAtSelling,
+    };
+  });
+
+  return {
+    totalItemsCount,
+    totalUniqueProducts: products.length,
+    overallTotalValueAtCost,
+    overallTotalValueAtSellingPrice,
+    items: reportItems,
+  };
+};
+
+export const dbGetLowStockItems = (branchId?: string): Product[] => {
+  const db = getDb();
+  // Assumes lowStockThreshold > 0 means it's set.
+  // Products where stockQuantity <= lowStockThreshold
+  let query = 'SELECT * FROM products WHERE stockQuantity <= lowStockThreshold AND lowStockThreshold > 0';
+  const params: any[] = [];
+  if (branchId) {
+    query += ' AND branchId = ?';
+    params.push(branchId);
+  }
+
+  const rows = db.prepare(query).all(...params);
+  return rows.map(rowToProduct);
+};
