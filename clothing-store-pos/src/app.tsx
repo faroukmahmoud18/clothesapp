@@ -1,7 +1,8 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react'; // Added useEffect
 import { HashRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom'; // Added useNavigate
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18next
+import { getDb } from '@/db/dbManager'; // Import getDb
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import POSPage from '@/pages/POSPage';
@@ -58,6 +59,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 
 const App: React.FC = () => {
+  useEffect(() => {
+    try {
+      console.log('[App] Initializing database connection...');
+      getDb(); // This will initialize the DB and schema if not already done
+      console.log('[App] Database connection checked/initialized.');
+    } catch (error) {
+      console.error('[App] Failed to initialize database on app load:', error);
+      // TODO: Show a critical error message to the user, as the app might not function.
+      // This could be a full-screen error overlay.
+    }
+  }, []); // Empty dependency array ensures this runs once on mount
+
   return (
     <Router>
       <Routes>
