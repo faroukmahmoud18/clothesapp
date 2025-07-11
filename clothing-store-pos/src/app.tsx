@@ -2,7 +2,8 @@ import React, { Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom'; // Added useNavigate
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18next
-import LoginPage from '@/pages/LoginPage'; // Actual LoginPage
+import LoginPage from '@/pages/LoginPage';
+import UnauthorizedPage from '@/pages/UnauthorizedPage'; // Import the new page
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
@@ -68,6 +69,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route
           path="/*"
           element={

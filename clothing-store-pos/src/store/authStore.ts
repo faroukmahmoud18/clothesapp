@@ -13,7 +13,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({ // Renamed get to _get as it's not used in this specific store setup
       isAuthenticated: false,
       currentUser: null,
       login: async (username, password) => {
@@ -21,7 +21,9 @@ export const useAuthStore = create<AuthState>()(
           (u) => u.username === username && u.password === password
         );
         if (user) {
-          set({ isAuthenticated: true, currentUser: user });
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { password: _removedPassword, ...userWithoutPassword } = user;
+          set({ isAuthenticated: true, currentUser: userWithoutPassword as User }); // Cast back to User type
           return true;
         }
         set({ isAuthenticated: false, currentUser: null });

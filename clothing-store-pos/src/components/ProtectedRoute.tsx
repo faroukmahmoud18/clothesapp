@@ -36,14 +36,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, requiredRoles 
     // For now, redirecting to a simple "forbidden" text page or back to POS.
     // A dedicated /forbidden page would be better.
     console.warn(`User ${currentUser?.username} with role ${currentUser?.role} tried to access ${location.pathname} without permission.`);
-    // return <Navigate to="/pos" state={{ message: "Access Denied" }} replace />;
-     return (
-      <div>
-        <h2>Access Denied</h2>
-        <p>You do not have permission to view this page.</p>
-        <button onClick={() => window.history.back()}>Go Back</button>
-      </div>
-    );
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return element;
