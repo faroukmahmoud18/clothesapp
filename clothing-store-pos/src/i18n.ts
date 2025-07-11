@@ -17,6 +17,11 @@ const enTranslations = {
     signIn: 'Sign In',
     loginFailed: 'Invalid username or password.',
     logout: 'Logout',
+    unauthorizedAccessTitle: "Access Denied",
+    unauthorizedAccessMessage: "You do not have the necessary permissions to view this page.",
+    unauthorizedContactAdmin: "If you believe this is an error, please contact your administrator.",
+    goBack: "Go Back",
+    goToHomepage: "Go to Homepage"
     // Add more translations as needed
   },
 };
@@ -36,6 +41,11 @@ const arTranslations = {
     signIn: 'تسجيل الدخول',
     loginFailed: 'اسم المستخدم أو كلمة المرور غير صالحة.',
     logout: 'تسجيل الخروج',
+    unauthorizedAccessTitle: "الوصول مرفوض",
+    unauthorizedAccessMessage: "ليس لديك الأذونات اللازمة لعرض هذه الصفحة.",
+    unauthorizedContactAdmin: "إذا كنت تعتقد أن هذا خطأ، يرجى الاتصال بالمسؤول.",
+    goBack: "العودة",
+    goToHomepage: "الذهاب إلى الصفحة الرئيسية"
     // Add more translations as needed
   },
 };
