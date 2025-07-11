@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon } from 'lucide-react';
-import { mockProducts } from '@/pos/mockData';
-import { Product } from '@/pos/types';
+import { mockProducts, mockProductTypes } from '@/pos/mockData'; // Import mockProductTypes
+import { Product, ProductType } from '@/pos/types'; // Import ProductType
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Dialog components
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
@@ -22,28 +22,44 @@ interface ProductFormDialogProps {
 
 const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen, onSave, productToEdit }) => {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<Omit<Product, 'id'>>({
+  const initialFormData: Omit<Product, 'id'> = {
     name: '', sku: '', category: '', purchasePrice: 0, sellingPrice: 0,
-    stockQuantity: 0, lowStockThreshold: 0, barcode: '', taxRate: 0.14, imageUrl: ''
-  });
+    stockQuantity: 0, lowStockThreshold: 0, barcode: '', taxRate: 0.14, imageUrl: '',
+    productTypeId: mockProductTypes.length > 0 ? mockProductTypes[0].id : '', // Default to first product type or empty
+    // Initialize other new fields as needed, e.g. supplierId, notes, lastStocktakeDate
+    supplierId: '',
+    notes: '',
+    // lastStocktakeDate is optional, might not need default in form unless specifically requested
+  };
+  const [formData, setFormData] = useState<Omit<Product, 'id'>>(initialFormData);
+
 
   useEffect(() => {
     if (productToEdit) {
-      setFormData(productToEdit);
-    } else {
-      // Reset for new product
+      // Ensure all fields, including new ones, are populated from productToEdit
+      // or have defaults if not present on productToEdit
       setFormData({
-        name: '', sku: '', category: '', purchasePrice: 0, sellingPrice: 0,
-        stockQuantity: 0, lowStockThreshold: 0, barcode: '', taxRate: 0.14, imageUrl: ''
+        ...initialFormData, // Start with defaults for all fields
+        ...productToEdit,   // Override with actual values from productToEdit
+        productTypeId: productToEdit.productTypeId || initialFormData.productTypeId,
+        taxRate: productToEdit.taxRate !== undefined ? productToEdit.taxRate : initialFormData.taxRate, // Ensure taxRate is handled
+      });
+    } else {
+      // Reset for new product, ensuring productTypeId has a default
+      setFormData({
+        ...initialFormData,
+        productTypeId: mockProductTypes.length > 0 ? mockProductTypes[0].id : '', // Reset to default
       });
     }
   }, [productToEdit, isOpen]); // Reset form when dialog opens or productToEdit changes
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { // Added HTMLSelectElement
     const { name, value, type } = e.target;
+    // Check if it's a checkbox or other input type if more are added
+    const val = type === 'number' ? parseFloat(value) || 0 : value;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      [name]: val
     }));
   };
 
@@ -71,13 +87,35 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
           <div><Label htmlFor="name">{t('productName')}</Label><Input id="name" name="name" value={formData.name} onChange={handleChange} required className={commonInputClass} /></div>
           <div><Label htmlFor="sku">{t('sku')}</Label><Input id="sku" name="sku" value={formData.sku} onChange={handleChange} required className={commonInputClass} /></div>
           <div><Label htmlFor="category">{t('category')}</Label><Input id="category" name="category" value={formData.category} onChange={handleChange} required className={commonInputClass} /></div>
+          <div>
+            <Label htmlFor="productTypeId">{t('productType')}</Label> {/* Add this translation */}
+            <select
+              id="productTypeId"
+              name="productTypeId"
+              value={formData.productTypeId || ''}
+              onChange={handleChange}
+              className={commonInputClass}
+            >
+              <option value="" disabled>{t('selectProductType')}</option> {/* Add this translation */}
+              {mockProductTypes.map((pt) => (
+                <option key={pt.id} value={pt.id}>
+                  {pt.name} ({pt.taxRate * 100}%)
+                </option>
+              ))}
+            </select>
+          </div>
           <div><Label htmlFor="barcode">{t('barcodeOptional')}</Label><Input id="barcode" name="barcode" value={formData.barcode || ''} onChange={handleChange} className={commonInputClass} /></div>
           <div><Label htmlFor="sellingPrice">{t('sellingPrice')}</Label><Input id="sellingPrice" name="sellingPrice" type="number" value={formData.sellingPrice} onChange={handleChange} required min="0" step="0.01" className={commonInputClass} /></div>
           <div><Label htmlFor="purchasePrice">{t('purchasePriceOptional')}</Label><Input id="purchasePrice" name="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} min="0" step="0.01" className={commonInputClass} /></div>
           <div><Label htmlFor="stockQuantity">{t('stockQuantity')}</Label><Input id="stockQuantity" name="stockQuantity" type="number" value={formData.stockQuantity} onChange={handleChange} required min="0" step="1" className={commonInputClass} /></div>
           <div><Label htmlFor="lowStockThreshold">{t('lowStockThresholdOptional')}</Label><Input id="lowStockThreshold" name="lowStockThreshold" type="number" value={formData.lowStockThreshold || 0} onChange={handleChange} min="0" step="1" className={commonInputClass} /></div>
-          <div><Label htmlFor="taxRate">{t('taxRatePercentage')}</Label><Input id="taxRate" name="taxRate" type="number" value={formData.taxRate * 100} onChange={(e) => setFormData(prev => ({...prev, taxRate: parseFloat(e.target.value) / 100 || 0}))} min="0" step="0.01" placeholder="e.g., 14 for 14%" className={commonInputClass} /></div>
+          <div>
+            <Label htmlFor="taxRate">{t('productTaxRateOptional')}</Label> {/* Updated translation key */}
+            <Input id="taxRate" name="taxRate" type="number" value={formData.taxRate !== undefined ? formData.taxRate * 100 : ''} onChange={(e) => setFormData(prev => ({...prev, taxRate: parseFloat(e.target.value) / 100 || undefined}))} min="0" step="0.01" placeholder={t('taxRatePlaceholder')} className={commonInputClass} /> {/* Add placeholder translation */}
+            <p className="text-xs text-muted-foreground mt-1">{t('taxRateNote')}</p> {/* Add note translation */}
+          </div>
           <div className="md:col-span-2"><Label htmlFor="imageUrl">{t('imageUrlOptional')}</Label><Input id="imageUrl" name="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} className={commonInputClass} /></div>
+          {/* TODO: Add fields for supplierId (dropdown), notes (textarea), lastStocktakeDate (datepicker) if required by form */}
 
           <DialogFooter className="md:col-span-2 mt-4">
             <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>

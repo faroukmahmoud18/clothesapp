@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 // Removed PlusCircleIcon, PercentIcon from lucide-react import
-import { SearchIcon, UserCircle2Icon, Settings2Icon, DollarSignIcon, Trash2Icon, PlusIcon, MinusIcon, TagIcon } from 'lucide-react';
+// Added BarcodeIcon
+import { SearchIcon, UserCircle2Icon, Settings2Icon, DollarSignIcon, Trash2Icon, PlusIcon, MinusIcon, TagIcon, Barcode as BarcodeIcon } from 'lucide-react';
 import { mockProducts } from '@/pos/mockData';
 import { Product, PaymentMethod } from '@/pos/types'; // Added PaymentMethod
 import { useCartStore, CartItem, DiscountType } from '@/store/cartStore'; // Import cart store and DiscountType
@@ -85,6 +86,8 @@ const DiscountDialog: React.FC<DiscountDialogProps> = ({ isOpen, setIsOpen, onAp
 const POSPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [barcodeInputValue, setBarcodeInputValue] = React.useState('');
+  const barcodeInputRef = React.useRef<HTMLInputElement>(null);
   const [searchResults, setSearchResults] = React.useState<Product[]>(mockProducts);
 
   // Cart store integration
@@ -133,16 +136,56 @@ const POSPage: React.FC = () => {
     addItemToCart(product, 1); // Add 1 quantity by default
   };
 
+  // Auto-focus barcode input on mount and after cart clear
+  React.useEffect(() => {
+    barcodeInputRef.current?.focus();
+  }, [cartItems.length === 0]); // Re-focus when cart becomes empty (e.g. after a sale)
+
+  const handleBarcodeScan = () => {
+    if (!barcodeInputValue.trim()) return;
+
+    const scannedBarcode = barcodeInputValue.trim();
+    // Use mockProducts directly as it's the source of truth for all available products
+    const productFound = mockProducts.find(p => p.barcode === scannedBarcode);
+
+    if (productFound) {
+      addItemToCart(productFound, 1); // addItemToCart handles existing items by incrementing quantity
+      setBarcodeInputValue(''); // Clear input after successful scan
+    } else {
+      // TODO: Implement a more user-friendly notification (e.g., toast)
+      alert(t('productNotFoundWithBarcode', { barcode: scannedBarcode }));
+      // Optionally, clear the input or let user correct it
+      // setBarcodeInputValue('');
+    }
+    barcodeInputRef.current?.focus(); // Always refocus after attempting a scan
+  };
+
   return (
     <div className="flex flex-col h-screen bg-muted/40 p-4 gap-4">
-      {/* Top Bar: Search, Customer, Settings */}
+      {/* Top Bar: Barcode, Search, Customer, Settings */}
       <header className="flex items-center gap-4 bg-background p-3 rounded-lg shadow">
-        <div className="relative flex-grow">
+        <div className="relative flex-grow-[2]"> {/* Barcode input takes more space */}
+          <BarcodeIcon className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
+          <Input
+            ref={barcodeInputRef}
+            type="text"
+            placeholder={t('scanBarcodePlaceholder')} // Add this translation
+            className="pl-10 w-full text-base py-2.5" // Increased padding and text size
+            value={barcodeInputValue}
+            onChange={(e) => setBarcodeInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleBarcodeScan();
+              }
+            }}
+          />
+        </div>
+        <div className="relative flex-grow"> {/* Search input takes less space now */}
           <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder={t('posSearchPlaceholder')}
-            className="pl-8 w-full"
+            className="pl-8 w-full" // Standard size
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -374,26 +417,54 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, setIsOpen, totalA
     }
   }, [amountTendered, totalAmount, selectedMethod]);
 
-  React.useEffect(() => { // Reset amount tendered if totalAmount changes (e.g. cart updates while dialog is open)
+  React.useEffect(() => { // Reset amount tendered if totalAmount changes or dialog opens
     if (isOpen) {
-        setAmountTendered(totalAmount.toFixed(2));
+      if (selectedMethod === PaymentMethod.CASH) {
+        setAmountTendered(totalAmount.toFixed(2)); // Pre-fill for cash
+      } else {
+        setAmountTendered(''); // Clear for non-cash methods
+      }
     }
-  }, [totalAmount, isOpen]);
+  }, [totalAmount, isOpen, selectedMethod]);
 
 
   const handleConfirm = () => {
-    const tendered = parseFloat(amountTendered);
-    if (selectedMethod === PaymentMethod.CASH && (isNaN(tendered) || tendered < totalAmount)) {
-      alert(t('amountTenderedTooLow')); // Basic validation
-      return;
+    let paymentDetails: { method: PaymentMethod; amountPaid: number; tendered?: number };
+
+    if (selectedMethod === PaymentMethod.CASH) {
+      const tendered = parseFloat(amountTendered);
+      if (isNaN(tendered) || tendered < totalAmount) {
+        alert(t('amountTenderedTooLow')); // Basic validation
+        return;
+      }
+      paymentDetails = {
+        method: selectedMethod,
+        amountPaid: totalAmount,
+        tendered: tendered,
+      };
+    } else { // For CARD and DEFERRED
+      paymentDetails = {
+        method: selectedMethod,
+        amountPaid: totalAmount,
+        // tendered is not applicable
+      };
     }
-    onConfirmPayment({
-      method: selectedMethod,
-      amountPaid: totalAmount,
-      tendered: selectedMethod === PaymentMethod.CASH ? tendered : undefined,
-    });
+
+    onConfirmPayment(paymentDetails);
     setIsOpen(false);
-    setAmountTendered(''); // Reset
+    // Reset state for next time dialog opens
+    setSelectedMethod(PaymentMethod.CASH); // Default back to cash
+    setAmountTendered('');
+    setChangeDue(0);
+  };
+
+  const isConfirmDisabled = () => {
+    if (selectedMethod === PaymentMethod.CASH) {
+      const tendered = parseFloat(amountTendered);
+      return isNaN(tendered) || tendered < totalAmount;
+    }
+    // No specific disabled condition for CARD or DEFERRED based on input here
+    return false;
   };
 
   return (
@@ -421,6 +492,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, setIsOpen, totalA
               <RadioGroupItem value={PaymentMethod.CARD} id="pm_card" />
               <Label htmlFor="pm_card">{t('paymentMethodCard')}</Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value={PaymentMethod.DEFERRED} id="pm_deferred" />
+              <Label htmlFor="pm_deferred">{t('paymentMethodDeferred')}</Label> {/* Add this translation */}
+            </div>
           </RadioGroup>
 
           {selectedMethod === PaymentMethod.CASH && (
@@ -444,7 +519,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, setIsOpen, totalA
         </div>
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>
-          <Button onClick={handleConfirm} disabled={selectedMethod === 'Cash' && (parseFloat(amountTendered) < totalAmount || isNaN(parseFloat(amountTendered)))}>
+          <Button onClick={handleConfirm} disabled={isConfirmDisabled()}>
             {t('confirmPayment')}
           </Button>
         </DialogFooter>

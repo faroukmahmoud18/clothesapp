@@ -217,14 +217,96 @@ export const useCartStore = create<CartState>((set, get) => ({
     return subtotal - invoiceDiscount;
   },
 
-  getTax: (taxRate = DEFAULT_TAX_RATE) => {
-    const taxableAmount = get().getSubtotalAfterInvoiceDiscount(); // Tax on final discounted subtotal
-    return taxableAmount * taxRate;
+  getTax: () => {
+    // Import mockProductTypes here or pass it in if it becomes dynamic
+    // For now, direct import for simplicity with mock data
+    const { mockProductTypes } = require('@/pos/mockData'); // Using require for conditional/local scope import
+
+    const items = get().items;
+    let totalTax = 0;
+
+    items.forEach(item => {
+      let itemTaxRate = DEFAULT_TAX_RATE; // Start with default
+
+      if (item.productTypeId) {
+        const productType = mockProductTypes.find((pt: any) => pt.id === item.productTypeId); // Add 'any' type for pt temporarily
+        if (productType && typeof productType.taxRate === 'number') {
+          itemTaxRate = productType.taxRate;
+        } else if (typeof item.taxRate === 'number') { // Fallback to product's own taxRate
+          itemTaxRate = item.taxRate;
+        }
+      } else if (typeof item.taxRate === 'number') { // Fallback to product's own taxRate if no productTypeId
+        itemTaxRate = item.taxRate;
+      }
+
+      // Tax is typically calculated on the price after item discounts but before invoice discounts.
+      // Each item's lineTotal already reflects item-level discounts.
+      // The subtotalAfterInvoiceDiscount is the sum of these lineTotals minus invoice discount.
+      // So, we need to calculate tax per item based on its lineTotal,
+      // then sum them up. This sum is the total tax.
+      // The invoice discount is applied to the sum of (lineTotal + itemTaxOnLineTotal).
+      // This logic is getting complex and might need a larger refactor later for full accuracy
+      // regarding when invoice discount is applied (before or after tax).
+      // Current: Tax is on (Sum of lineTotals - InvoiceDiscount)
+      // New: Tax is Sum of (Tax on individual lineTotals)
+
+      // For now, let's adjust to sum individual taxes based on their lineTotals.
+      // This means tax is calculated BEFORE invoice-level discount.
+      // If tax should be AFTER invoice discount, the approach needs to distribute the invoice discount proportionally.
+      // The plan mentions "Tax applied on subtotalAfterInvoiceDiscount" in the old CartState.
+      // Let's stick to that for now but use item-specific rates. This means we need to find an *average* weighted tax rate.
+      // OR, the definition of subtotalAfterInvoiceDiscount needs to be pre-tax.
+
+      // Simpler approach for now: Calculate tax on each item's lineTotal, then sum it up.
+      // This implies invoice discount is applied on the pre-tax subtotal.
+      const taxForItem = item.lineTotal * itemTaxRate;
+      totalTax += taxForItem;
+    });
+
+    // If the requirement is that the invoice discount applies to the subtotal *before* tax,
+    // and then the *total tax amount* is calculated based on the *discounted subtotal* using varied rates,
+    // that's more complex. It would require calculating a weighted average tax rate based on the
+    // composition of the cart *after item discounts* but *before invoice discounts*, then applying that
+    // weighted average rate to the `subtotalAfterInvoiceDiscount`.
+
+    // Let's re-evaluate: The current getTax applies a single rate to subtotalAfterInvoiceDiscount.
+    // To adapt this with minimal change to overall flow:
+    // 1. Calculate subtotalAfterInvoiceDiscount (as is). This is the final taxable base.
+    // 2. For each item, determine its proportion of the original subtotal (sum of lineTotals).
+    // 3. Distribute the subtotalAfterInvoiceDiscount to items based on these proportions.
+    // 4. Apply the item-specific tax rate to its proportional share of subtotalAfterInvoiceDiscount.
+    // This seems overly complex for this stage.
+
+    // Sticking to the plan's initial hint: "Tax applied on subtotalAfterInvoiceDiscount"
+    // but using item-specific rates means we need a weighted average tax rate.
+    const subtotalBeforeInvoiceDiscount = get().getSubtotalBeforeInvoiceDiscount();
+    if (subtotalBeforeInvoiceDiscount === 0) return 0; // No items, no tax.
+
+    let weightedTaxSum = 0;
+    items.forEach(item => {
+      let itemTaxRate = DEFAULT_TAX_RATE;
+      if (item.productTypeId) {
+        const productType = mockProductTypes.find((pt: any) => pt.id === item.productTypeId);
+        if (productType && typeof productType.taxRate === 'number') {
+          itemTaxRate = productType.taxRate;
+        } else if (typeof item.taxRate === 'number') {
+          itemTaxRate = item.taxRate;
+        }
+      } else if (typeof item.taxRate === 'number') {
+        itemTaxRate = item.taxRate;
+      }
+      weightedTaxSum += item.lineTotal * itemTaxRate; // item.lineTotal is after item discount
+    });
+
+    const effectiveWeightedTaxRate = weightedTaxSum / subtotalBeforeInvoiceDiscount;
+    const finalTaxableAmount = get().getSubtotalAfterInvoiceDiscount();
+
+    return finalTaxableAmount * effectiveWeightedTaxRate;
   },
 
-  getGrandTotal: (taxRate = DEFAULT_TAX_RATE) => {
+  getGrandTotal: () => {
     const subtotalAfterInvoiceDiscount = get().getSubtotalAfterInvoiceDiscount();
-    const tax = get().getTax(taxRate);
+    const tax = get().getTax(); // No longer takes taxRate argument
     return subtotalAfterInvoiceDiscount + tax;
   },
 }));
