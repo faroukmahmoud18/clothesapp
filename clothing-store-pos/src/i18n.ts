@@ -63,7 +63,39 @@ const enTranslations = {
     changeDue: "Change Due",
     confirmPayment: "Confirm Payment",
     amountTenderedTooLow: "Amount tendered is less than total due.",
-    saleCompletedSuccessfully: "Sale completed successfully!"
+    saleCompletedSuccessfully: "Sale completed successfully!",
+    // Inventory Page translations
+    inventoryManagement: "Inventory Management",
+    importProducts: "Import Products",
+    addNewProduct: "Add New Product",
+    searchInventoryPlaceholder: "Search by name, SKU, category...",
+    productName: "Product Name",
+    sku: "SKU",
+    category: "Category",
+    stockQuantity: "Stock Qty",
+    lowStockThreshold: "Low Stock Threshold",
+    actions: "Actions",
+    noInventoryItems: "No inventory items found.",
+    previousPage: "Previous",
+    nextPage: "Next",
+    pageNumber: "Page {{currentPage}} of {{totalPages}}",
+    // Product Form Dialog translations
+    editProductTitle: "Edit Product",
+    addNewProductTitle: "Add New Product",
+    barcodeOptional: "Barcode (Optional)",
+    sellingPrice: "Selling Price",
+    purchasePriceOptional: "Purchase Price (Optional)",
+    lowStockThresholdOptional: "Low Stock Threshold (Optional)",
+    taxRatePercentage: "Tax Rate (%)",
+    imageUrlOptional: "Image URL (Optional)",
+    saveChanges: "Save Changes",
+    addProduct: "Add Product",
+    fillRequiredFields: "Please fill all required fields (Name, SKU, Category).",
+    featureComingSoon: "Feature coming soon!",
+    confirmDeleteProduct: "Are you sure you want to delete the product \"{{productName}}\"?",
+    // View Product Details Dialog translations
+    productDetailsTitle: "Product Details",
+    close: "Close"
     // Add more translations as needed
   },
 };
@@ -129,7 +161,39 @@ const arTranslations = {
     changeDue: "الباقي",
     confirmPayment: "تأكيد الدفع",
     amountTenderedTooLow: "المبلغ المدفوع أقل من الإجمالي المستحق.",
-    saleCompletedSuccessfully: "تمت عملية البيع بنجاح!"
+    saleCompletedSuccessfully: "تمت عملية البيع بنجاح!",
+    // Inventory Page translations (Arabic)
+    inventoryManagement: "إدارة المخزون",
+    importProducts: "استيراد المنتجات",
+    addNewProduct: "إضافة منتج جديد",
+    searchInventoryPlaceholder: "البحث بالاسم، رمز SKU، الفئة...",
+    productName: "اسم المنتج",
+    sku: "SKU",
+    category: "الفئة",
+    stockQuantity: "كمية المخزون",
+    lowStockThreshold: "حد المخزون المنخفض",
+    actions: "الإجراءات",
+    noInventoryItems: "لم يتم العثور على عناصر في المخزون.",
+    previousPage: "السابق",
+    nextPage: "التالي",
+    pageNumber: "صفحة {{currentPage}} من {{totalPages}}",
+    // Product Form Dialog translations (Arabic)
+    editProductTitle: "تعديل المنتج",
+    addNewProductTitle: "إضافة منتج جديد",
+    barcodeOptional: "الباركود (اختياري)",
+    sellingPrice: "سعر البيع",
+    purchasePriceOptional: "سعر الشراء (اختياري)",
+    lowStockThresholdOptional: "حد المخزون المنخفض (اختياري)",
+    taxRatePercentage: "نسبة الضريبة (%)",
+    imageUrlOptional: "رابط الصورة (اختياري)",
+    saveChanges: "حفظ التغييرات",
+    addProduct: "إضافة منتج",
+    fillRequiredFields: "يرجى ملء جميع الحقول المطلوبة (الاسم، SKU، الفئة).",
+    featureComingSoon: "الميزة قيد التطوير!",
+    confirmDeleteProduct: "هل أنت متأكد أنك تريد حذف المنتج \"{{productName}}\"؟",
+    // View Product Details Dialog translations (Arabic)
+    productDetailsTitle: "تفاصيل المنتج",
+    close: "إغلاق"
     // Add more translations as needed
   },
 };
