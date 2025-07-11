@@ -41,16 +41,6 @@ const arTranslations = {
 };
 
 i18n
-    pos: 'نقطة البيع',
-    inventory: 'إدارة المخزون',
-    loginPage: 'صفحة تسجيل الدخول',
-    posPage: 'نقطة البيع',
-    inventoryPage: 'إدارة المخزون',
-    // Add more translations as needed
-  },
-};
-
-i18n
   .use(LanguageDetector) // Detect user language
   .use(initReactI18next) // Pass i18n instance to react-i18next
   .init({
