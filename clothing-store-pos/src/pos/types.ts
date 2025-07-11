@@ -48,4 +48,5 @@ export interface Invoice {
 }
 
 // For product search results or quick add
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ProductQuickSearchResult extends Pick<Product, 'id' | 'name' | 'sellingPrice' | 'barcode' | 'sku' | 'stockQuantity'> {}

@@ -5,7 +5,7 @@ import { User, UserRole, mockUsers } from '@/auth/mockAuth'; // Using path alias
 interface AuthState {
   isAuthenticated: boolean;
   currentUser: User | null;
-  login: (username tentativo: string, password tentativo: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   // For testing, allow setting user directly
   _setUser: (user: User | null) => void;
