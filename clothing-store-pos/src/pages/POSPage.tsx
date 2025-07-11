@@ -17,6 +17,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label"; // Assuming Label is already added
 import * as printerService from '@/printing/printerService'; // Import printer service
 import { useAuthStore } from '@/store/authStore'; // To get current user/branch if needed for invoice
+// import CustomerFormDialog from '@/customers/components/CustomerFormDialog'; // No longer directly used by POSPage header button
+import SelectCustomerDialog from '@/customers/components/SelectCustomerDialog'; // Import SelectCustomerDialog
+import { Customer } from '@/customers/types'; // Import Customer type
 
 // DiscountDialog component (can be moved to a separate file later if it grows)
 interface DiscountDialogProps {
@@ -121,8 +124,19 @@ const POSPage: React.FC = () => {
 
   // State for Payment Dialog
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
-  const clearCart = useCartStore((state) => state.clearCart);
+  const { clearCart, activeCustomerId: cartActiveCustomerId } = useCartStore(state => ({ // Get activeCustomerId from cartStore
+    clearCart: state.clearCart,
+    activeCustomerId: state.activeCustomerId,
+  }));
   const [printingStatus, setPrintingStatus] = React.useState<'idle' | 'printing' | 'success' | 'error'>('idle');
+
+  // Customer related state
+  const [isSelectCustomerDialogOpen, setIsSelectCustomerDialogOpen] = React.useState(false);
+  const [activeCustomerDisplay, setActiveCustomerDisplay] = React.useState<Customer | null>(null);
+  const clearActiveCustomerFromCart = useCartStore((state) => state.clearActiveCustomer);
+  const setActiveCustomerInCart = useCartStore((state) => state.setActiveCustomer);
+
+
   const currentUser = useAuthStore((state) => state.currentUser); // Get current user
   const currentBranch = useAuthStore((state) => state.availableBranches.find(b => b.id === state.currentBranchId)); // Get current branch details
 
@@ -144,7 +158,25 @@ const POSPage: React.FC = () => {
       }
     };
     fetchProductsData();
-  }, [t]);
+  }, [t]); // t is for error messages
+
+  // Fetch active customer details when cartActiveCustomerId changes
+  React.useEffect(() => {
+    if (cartActiveCustomerId) {
+      syncService.findCustomer(cartActiveCustomerId) // findCustomer can search by ID too if adapted
+        .then(customer => {
+          if (customer) setActiveCustomerDisplay(customer);
+          else clearActiveCustomerFromCart(); // Clear from cart store if not found in DB
+        })
+        .catch(err => {
+          console.error("Error fetching active customer:", err);
+          clearActiveCustomerFromCart(); // Clear on error
+        });
+    } else {
+      setActiveCustomerDisplay(null);
+    }
+  }, [cartActiveCustomerId, clearActiveCustomerFromCart]);
+
 
   // Product search logic - now filters allProducts
   React.useEffect(() => {
@@ -231,15 +263,26 @@ const POSPage: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" onClick={() => setIsSelectCustomerDialogOpen(true)} title={t('addOrSelectCustomer')}>
           <UserCircle2Icon className="h-5 w-5" />
-          <span className="sr-only">{t('selectCustomer')}</span>
+          <span className="sr-only">{t('addOrSelectCustomer')}</span>
         </Button>
         <Button variant="outline" size="icon">
           <Settings2Icon className="h-5 w-5" />
           <span className="sr-only">{t('posSettings')}</span>
         </Button>
       </header>
+
+      {/* Active Customer Display */}
+      {activeCustomerDisplay && (
+        <div className="bg-primary/10 p-3 rounded-lg shadow-sm flex justify-between items-center">
+          <div>
+            <span className="font-semibold">{t('activeCustomerLabel')}:</span> {activeCustomerDisplay.name} ({activeCustomerDisplay.phone})
+            <span className="ml-4">{t('loyaltyPointsLabel')}: {activeCustomerDisplay.loyaltyPoints}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => clearActiveCustomerFromCart()}>{t('clearCustomerButton')}</Button>
+        </div>
+      )}
 
       {/* Main Content: Product Area and Cart Area */}
       <main className="flex flex-1 gap-4 overflow-hidden">
@@ -418,15 +461,34 @@ const POSPage: React.FC = () => {
             branchId: currentBranch?.id,
             // Required by Invoice type, ensure it's set
             status: 'completed' as 'completed' | 'pending' | 'voided' | 'parked', // Cast to satisfy type for now
+            customerId: cartActiveCustomerId || undefined, // Add customerId to invoice payload
           };
 
           // Attempt to save the sale via syncService (mocked for now)
           try {
-            await syncService.submitSale(invoicePayload); // Does not return the payload currently
-            console.log("Sale submitted via syncService, Invoice Data:", JSON.stringify(invoicePayload, null, 2));
+            const savedInvoice = await syncService.submitSale(invoicePayload); // Now returns the saved invoice
+            console.log("Sale submitted via syncService, Invoice Data:", JSON.stringify(savedInvoice, null, 2));
+
+            // Add loyalty points if a customer is active for the cart
+            if (cartActiveCustomerId && savedInvoice.grandTotal > 0) {
+              try {
+                const pointsAdded = await syncService.addLoyaltyPointsForSale(cartActiveCustomerId, savedInvoice.grandTotal);
+                if (pointsAdded) {
+                  console.log(`Loyalty points added for customer ${cartActiveCustomerId}`);
+                  // Optionally, refetch customer data here to update display if activeCustomerDisplay is used
+                  // For now, we assume the points are updated in DB and will reflect next time customer data is fetched.
+                } else {
+                  console.warn(`Failed to add loyalty points for customer ${cartActiveCustomerId}`);
+                }
+              } catch (loyaltyError) {
+                console.error(`Error adding loyalty points for customer ${cartActiveCustomerId}:`, loyaltyError);
+              }
+            }
           } catch (e) {
             console.error("Failed to submit sale via syncService", e);
+            alert(t('errorSubmittingSale', { message: (e as Error).message })); // Add translation
             // Decide if this failure should prevent receipt printing or clearing cart
+            // For now, we'll proceed to print attempt and clear cart.
           }
 
           alert(t('saleCompletedSuccessfully') + `\nInvoice ID: ${invoicePayload.id}`); // Simple feedback
@@ -472,6 +534,17 @@ const POSPage: React.FC = () => {
         }}
       />
       {/* TODO: Add a small UI element to display printingStatus feedback */}
+
+      <SelectCustomerDialog
+        isOpen={isSelectCustomerDialogOpen}
+        setIsOpen={setIsSelectCustomerDialogOpen}
+        onCustomerSelected={(customer) => {
+          // setActiveCustomerInCart is called within SelectCustomerDialog
+          // POSPage will react to cartActiveCustomerId changing via useEffect to update display
+          console.log('Customer selected on POS page:', customer);
+          // No need to call setActiveCustomerDisplay here directly, useEffect handles it.
+        }}
+      />
     </div>
   );
 };

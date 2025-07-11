@@ -25,7 +25,8 @@ const enTranslations = {
     goToHomepage: "Go to Homepage",
     // POS Page translations
     posSearchPlaceholder: "Search products by name, SKU, or barcode...",
-    selectCustomer: "Select Customer",
+    selectCustomer: "Select Customer", // Will be replaced by addOrSelectCustomer
+    addOrSelectCustomer: "Add/Select Customer",
     posSettings: "POS Settings",
     products: "Products",
     currentOrder: "Current Order",
@@ -157,8 +158,54 @@ const enTranslations = {
     noPaymentData: "No payment data available for this period.",
     inventoryItemsDetail: "Inventory Items Detail",
     totalValueCost: "Total Value (Cost)",
-    totalValueSelling: "Total Value (Selling)"
+    totalValueSelling: "Total Value (Selling)",
+    errorSubmittingSale: "Error submitting sale: {{message}}",
+    errorSubmittingSale: "Error submitting sale: {{message}}",
+    activeCustomerLabel: "Active Customer",
+    loyaltyPointsLabel: "Points",
+    clearCustomerButton: "Clear Customer",
+    // Select Customer Dialog
+    selectCustomerDialog: {
+      title: "Select or Add Customer",
+      searchPlaceholder: "Search by name, phone, member code...",
+      noCustomersFound: "No customers found.",
+      errorSearching: "Error searching customers: {{message}}",
+      searchingButton: "Searching...",
+      searchButton: "Search",
+      addNewButtonTitle: "Add New Customer",
+      addNewButton: "Add New",
+      selectButton: "Select",
+      noCustomersFoundForQuery: "No customers found matching '{{query}}'.",
+    },
+    // Customer Form Dialog
+    customerForm: {
+      errorNamePhoneRequired: "Customer name and phone are required.",
+      errorInvalidPhone: "Invalid phone number format.",
+      successRegistered: "Customer {{name}} registered successfully!",
+      errorPhoneExists: "Customer with phone number {{phone}} already exists.",
+      errorMemberCodeExists: "Customer with member code {{memberCode}} already exists.",
+      errorGeneric: "Failed to register customer: {{message}}",
+      addTitle: "Register New Customer",
+      editTitle: "Edit Customer",
+      nameLabel: "Full Name",
+      phoneLabel: "Phone Number",
+      emailLabel: "Email (Optional)",
+      addressLabel: "Address (Optional)",
+      memberCodeLabelOptional: "Member Code (Optional)",
+      memberCodePlaceholder: "Auto-generated if left empty",
+      savingButton: "Saving...",
+      saveButton: "Save Customer"
+    }
     // Add more translations as needed
+  },
+  },
+  syncStatus: {
+    syncing: "Syncing...",
+    error: "Sync Error",
+    lastSynced: "Last Synced",
+    ready: "Ready to Sync",
+    itemsPending: "items pending",
+    syncNowButton: "Sync Now",
   },
   receipt: { // Namespace for receipt-specific terms
     storeName: "My Awesome Clothing Store",
@@ -207,7 +254,8 @@ const arTranslations = {
     goToHomepage: "الذهاب إلى الصفحة الرئيسية",
     // POS Page translations (Arabic)
     posSearchPlaceholder: "ابحث عن المنتجات بالاسم أو الرمز أو الباركود...",
-    selectCustomer: "اختر العميل",
+    selectCustomer: "اختر العميل", // Will be replaced
+    addOrSelectCustomer: "إضافة/اختيار عميل",
     posSettings: "إعدادات نقطة البيع",
     products: "المنتجات",
     currentOrder: "الطلب الحالي",
@@ -339,8 +387,53 @@ const arTranslations = {
     noPaymentData: "لا توجد بيانات دفع متاحة لهذه الفترة.",
     inventoryItemsDetail: "تفاصيل أصناف المخزون",
     totalValueCost: "القيمة الإجمالية (التكلفة)",
-    totalValueSelling: "القيمة الإجمالية (البيع)"
+    totalValueSelling: "القيمة الإجمالية (البيع)",
+    errorSubmittingSale: "خطأ في إرسال عملية البيع: {{message}}",
+    activeCustomerLabel: "العميل النشط",
+    loyaltyPointsLabel: "النقاط",
+    clearCustomerButton: "إزالة العميل",
+    // Select Customer Dialog (Arabic)
+    selectCustomerDialog: {
+      title: "اختيار أو إضافة عميل",
+      searchPlaceholder: "البحث بالاسم، الهاتف، رمز العضوية...",
+      noCustomersFound: "لم يتم العثور على عملاء.",
+      errorSearching: "خطأ في البحث عن العملاء: {{message}}",
+      searchingButton: "جاري البحث...",
+      searchButton: "بحث",
+      addNewButtonTitle: "إضافة عميل جديد",
+      addNewButton: "إضافة جديد",
+      selectButton: "اختيار",
+      noCustomersFoundForQuery: "لم يتم العثور على عملاء يطابقون '{{query}}'.",
+    },
+    // Customer Form Dialog (Arabic)
+    customerForm: {
+      errorNamePhoneRequired: "اسم العميل ورقم الهاتف مطلوبان.",
+      errorInvalidPhone: "صيغة رقم الهاتف غير صالحة.",
+      successRegistered: "تم تسجيل العميل {{name}} بنجاح!",
+      errorPhoneExists: "العميل برقم الهاتف {{phone}} موجود بالفعل.",
+      errorMemberCodeExists: "العميل برمز العضوية {{memberCode}} موجود بالفعل.",
+      errorGeneric: "فشل تسجيل العميل: {{message}}",
+      addTitle: "تسجيل عميل جديد",
+      editTitle: "تعديل بيانات العميل",
+      nameLabel: "الاسم الكامل",
+      phoneLabel: "رقم الهاتف",
+      emailLabel: "البريد الإلكتروني (اختياري)",
+      addressLabel: "العنوان (اختياري)",
+      memberCodeLabelOptional: "رمز العضوية (اختياري)",
+      memberCodePlaceholder: "يتم إنشاؤه تلقائيًا إذا ترك فارغًا",
+      savingButton: "جاري الحفظ...",
+      saveButton: "حفظ العميل"
+    }
     // Add more translations as needed
+  },
+  },
+  syncStatus: { // Arabic
+    syncing: "جاري المزامنة...",
+    error: "خطأ في المزامنة",
+    lastSynced: "آخر مزامنة",
+    ready: "جاهز للمزامنة",
+    itemsPending: "عناصر معلقة",
+    syncNowButton: "مزامنة الآن",
   },
   receipt: { // Namespace for receipt-specific terms (Arabic)
     storeName: "متجر ملابسي الرائع",

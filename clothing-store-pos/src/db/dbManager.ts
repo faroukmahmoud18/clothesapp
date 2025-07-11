@@ -141,6 +141,40 @@ const initializeDatabaseSchema = (db: Database.Database) => {
     );
   `);
 
+  // Customers Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL UNIQUE,
+      email TEXT,
+      memberCode TEXT UNIQUE,
+      loyaltyPoints INTEGER NOT NULL DEFAULT 0,
+      address TEXT,
+      createdAt TEXT NOT NULL, -- ISO8601 string
+      updatedAt TEXT NOT NULL, -- ISO8601 string
+      branchId TEXT,
+      FOREIGN KEY (branchId) REFERENCES branches(id)
+    );
+  `);
+  // Consider indexes on customers.phone, customers.memberCode, customers.name
+
+  // Sync Queue Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,                  -- e.g., 'CREATE_PRODUCT', 'SUBMIT_SALE'
+      payload TEXT NOT NULL,               -- JSON string of the data for the API call
+      entityId TEXT,                       -- Optional: ID of the entity (product, invoice, customer)
+      attempts INTEGER NOT NULL DEFAULT 0,
+      lastAttemptAt TEXT,                  -- ISO8601 string
+      status TEXT NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'FAILED', 'PROCESSING'
+      createdAt TEXT NOT NULL,               -- ISO8601 string
+      errorDetails TEXT                    -- JSON string or text of the last error
+    );
+  `);
+  // Consider indexes on sync_queue.status, sync_queue.createdAt, sync_queue.attempts
+
   console.log('[DBManager] Database schema initialization complete.');
 };
 

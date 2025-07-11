@@ -3,6 +3,9 @@ import { HashRouter as Router, Routes, Route, Link, Navigate, useNavigate } from
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18next
 import { getDb } from '@/db/dbManager'; // Import getDb
+import { useAppStore } from '@/store/appStore'; // Import appStore
+import { Button } from '@/components/ui/button'; // Import Button for Sync button
+import { RefreshCwIcon, CheckCircle, AlertTriangleIcon } from 'lucide-react'; // Icons for sync status
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import POSPage from '@/pages/POSPage';
@@ -22,6 +25,26 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUser = useAuthStore((state) => state.currentUser);
   const navigate = useNavigate();
 
+  const {
+    isSyncing,
+    lastSyncTimestamp,
+    syncError,
+    pendingQueueCount,
+    triggerSync,
+    updatePendingQueueCount
+  } = useAppStore();
+
+  useEffect(() => {
+    // Update queue count periodically or on specific events if needed,
+    // for now, it updates after triggerSync and on store init.
+    // This is an example if we wanted to refresh it on interval when component is mounted:
+    // const intervalId = setInterval(() => {
+    //   updatePendingQueueCount();
+    // }, 60000); // every minute
+    // return () => clearInterval(intervalId);
+  }, [updatePendingQueueCount]);
+
+
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
@@ -39,13 +62,38 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <ul className="flex space-x-4 items-center">
               <li><Link to="/pos" className="hover:text-secondary-foreground">{t('pos')}</Link></li>
               <li><Link to="/inventory" className="hover:text-secondary-foreground">{t('inventory')}</Link></li>
-              <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li> {/* Add translation */}
+              <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li>
             </ul>
-            <div className="flex items-center space-x-4">
-              {currentUser && <span className="text-sm">Welcome, {currentUser.name} ({currentUser.role})</span>}
-              <button onClick={() => changeLanguage('en')} className="mr-2 p-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80">English</button>
-              <button onClick={() => changeLanguage('ar')} className="p-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80">العربية</button>
-              <button onClick={handleLogout} className="p-1 bg-destructive text-destructive-foreground rounded hover:bg-destructive/80">{t('logout')}</button>
+            <div className="flex items-center space-x-2"> {/* Reduced space-x for tighter group */}
+              {/* Sync Status & Button */}
+              <div className="flex items-center space-x-1 text-xs mr-2 p-1 rounded">
+                {isSyncing ? (
+                  <RefreshCwIcon className="h-4 w-4 animate-spin" />
+                ) : syncError ? (
+                  <AlertTriangleIcon className="h-4 w-4 text-destructive" title={syncError}/>
+                ) : (
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                )}
+                <span className="hidden md:inline">
+                  {isSyncing ? t('syncStatus.syncing') :
+                   syncError ? t('syncStatus.error') :
+                   lastSyncTimestamp ? `${t('syncStatus.lastSynced')}: ${new Date(lastSyncTimestamp).toLocaleTimeString()}` : t('syncStatus.ready')}
+                </span>
+                {pendingQueueCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-amber-500 text-white rounded-full" title={`${pendingQueueCount} ${t('syncStatus.itemsPending')}`}>
+                    {pendingQueueCount}
+                  </span>
+                )}
+              </div>
+              <Button onClick={triggerSync} disabled={isSyncing} variant="ghost" size="sm" className="p-1 h-auto hover:bg-primary-foreground/20">
+                <RefreshCwIcon className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span className="ml-1 hidden lg:inline">{t('syncStatus.syncNowButton')}</span>
+              </Button>
+
+              {currentUser && <span className="text-sm hidden md:inline">Welcome, {currentUser.name} ({currentUser.role})</span>}
+              <button onClick={() => changeLanguage('en')} className="p-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 text-xs">EN</button>
+              <button onClick={() => changeLanguage('ar')} className="p-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 text-xs">AR</button>
+              <Button onClick={handleLogout} variant="destructive" size="sm" className="p-1 h-auto text-xs">{t('logout')}</Button>
             </div>
           </div>
         </nav>

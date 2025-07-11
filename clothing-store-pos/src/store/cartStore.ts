@@ -18,6 +18,7 @@ interface CartState {
   invoiceDiscountType: DiscountType | null;
   invoiceDiscountValue: number;
   invoiceDiscountAmount: number; // Calculated overall invoice discount amount
+  activeCustomerId: string | null; // For associating sale with a customer
 
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
@@ -33,6 +34,8 @@ interface CartState {
   getSubtotalAfterInvoiceDiscount: () => number;
   getTax: (taxRate?: number) => number; // Tax applied on subtotalAfterInvoiceDiscount
   getGrandTotal: (taxRate?: number) => number;
+  setActiveCustomer: (customerId: string | null) => void;
+  clearActiveCustomer: () => void;
 }
 
 const DEFAULT_TAX_RATE = 0.14; // Default 14% VAT
@@ -51,6 +54,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   invoiceDiscountType: null,
   invoiceDiscountValue: 0,
   invoiceDiscountAmount: 0,
+  activeCustomerId: null,
 
   addItem: (product, quantity = 1) => {
     set((state) => {
@@ -309,6 +313,26 @@ export const useCartStore = create<CartState>((set, get) => ({
     const tax = get().getTax(); // No longer takes taxRate argument
     return subtotalAfterInvoiceDiscount + tax;
   },
+
+  setActiveCustomer: (customerId: string | null) => {
+    set({ activeCustomerId: customerId });
+  },
+
+  clearActiveCustomer: () => {
+    set({ activeCustomerId: null });
+  },
 }));
+
+// Ensure clearCart also clears the activeCustomerId
+const originalClearCart = useCartStore.getState().clearCart;
+useCartStore.setState(state => ({
+  ...state,
+  clearCart: () => {
+    originalClearCart();
+    state.clearActiveCustomer(); // Call the new action
+    // Or directly: set({ activeCustomerId: null, ...other_reset_fields });
+  }
+}));
+
 
 export default useCartStore;
