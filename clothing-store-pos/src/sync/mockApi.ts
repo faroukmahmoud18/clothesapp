@@ -1,6 +1,7 @@
 // @/sync/mockApi.ts
 
 import { Product, Invoice } from '@/pos/types';
+import { Customer } from '@/customers/types'; // Import Customer type
 import { mockProducts } from '@/pos/mockData'; // Using existing mock products as our "database"
 import { v4 as uuidv4 } from 'uuid';
 
@@ -97,4 +98,80 @@ export const resetMockProducts = () => {
 export const resetMockSales = () => {
   console.log('[MockAPI] Resetting mock sales.');
   mockRecordedSales.length = 0; // Clears the array
+};
+
+// --- Customer API ---
+let localMockCustomers: Customer[] = []; // Initialize empty or with some mock data
+
+export const fetchCustomers = async (searchQuery?: string): Promise<Customer[]> => {
+  await networkDelay(250);
+  console.log('[MockAPI] fetchCustomers called, query:', searchQuery);
+  let customers = JSON.parse(JSON.stringify(localMockCustomers));
+  if (searchQuery) {
+    const sq = searchQuery.toLowerCase();
+    customers = customers.filter((c: Customer) =>
+      c.name.toLowerCase().includes(sq) ||
+      c.phone.includes(sq) ||
+      (c.memberCode && c.memberCode.toLowerCase().includes(sq)) ||
+      (c.email && c.email.toLowerCase().includes(sq))
+    );
+  }
+  return Promise.resolve(customers);
+};
+
+export const fetchCustomerById = async (id: string): Promise<Customer | undefined> => {
+  await networkDelay(100);
+  console.log(`[MockAPI] fetchCustomerById called for ID: ${id}`);
+  const customer = localMockCustomers.find(c => c.id === id);
+  return Promise.resolve(customer ? JSON.parse(JSON.stringify(customer)) : undefined);
+};
+
+export const createCustomer = async (customerData: Omit<Customer, 'id' | 'loyaltyPoints' | 'createdAt' | 'updatedAt'>): Promise<Customer> => {
+  await networkDelay(350);
+  console.log('[MockAPI] createCustomer called with data:', customerData);
+  const now = new Date().toISOString();
+  const newCustomer: Customer = {
+    ...customerData,
+    id: uuidv4(),
+    loyaltyPoints: 0,
+    createdAt: now,
+    updatedAt: now,
+    memberCode: customerData.memberCode || `MC-${Date.now() % 100000}`, // Simple mock member code
+  };
+  localMockCustomers.push(newCustomer);
+  return Promise.resolve(JSON.parse(JSON.stringify(newCustomer)));
+};
+
+export const updateCustomer = async (customerId: string, customerUpdateData: Partial<Omit<Customer, 'id' | 'loyaltyPoints' | 'createdAt' | 'updatedAt'>>): Promise<Customer | undefined> => {
+  await networkDelay(350);
+  console.log(`[MockAPI] updateCustomer called for ID: ${customerId} with data:`, customerUpdateData);
+  const customerIndex = localMockCustomers.findIndex(c => c.id === customerId);
+  if (customerIndex !== -1) {
+    localMockCustomers[customerIndex] = {
+      ...localMockCustomers[customerIndex],
+      ...customerUpdateData,
+      updatedAt: new Date().toISOString(), // Always update timestamp
+    };
+    return Promise.resolve(JSON.parse(JSON.stringify(localMockCustomers[customerIndex])));
+  }
+  return Promise.resolve(undefined); // Not found
+};
+
+// Specific endpoint for loyalty points might exist, or it could be part of general updateCustomer
+export const updateCustomerLoyaltyPointsApi = async (customerId: string, newPointsTotal: number): Promise<Customer | undefined> => {
+    await networkDelay(200);
+    console.log(`[MockAPI] updateCustomerLoyaltyPointsApi for ID: ${customerId}, new points: ${newPointsTotal}`);
+    const customerIndex = localMockCustomers.findIndex(c => c.id === customerId);
+    if (customerIndex !== -1) {
+        localMockCustomers[customerIndex].loyaltyPoints = newPointsTotal;
+        localMockCustomers[customerIndex].updatedAt = new Date().toISOString();
+        return Promise.resolve(JSON.parse(JSON.stringify(localMockCustomers[customerIndex])));
+    }
+    return Promise.resolve(undefined);
+};
+
+
+export const resetMockCustomers = () => {
+  console.log('[MockAPI] Resetting mock customers.');
+  localMockCustomers = [];
 };

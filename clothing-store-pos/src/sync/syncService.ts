@@ -12,7 +12,14 @@ import {
   PaymentMethodSummary,
   // TopSellingProduct, // If we implement it
 } from '@/reports/types';
+import { Customer } from '@/customers/types'; // Import Customer type
+import * as customerRepository from '@/db/customerRepository'; // Import customerRepository
+import * as syncQueueManager from './syncQueueManager'; // Import syncQueueManager
 import { v4 as uuidv4 } from 'uuid'; // For generating local IDs if needed
+
+// === Loyalty Configuration ===
+export const LOYALTY_POINTS_PER_AMOUNT = 1; // e.g., 1 point
+export const LOYALTY_AMOUNT_FOR_POINTS = 10; // e.g., per 10 EGP spent
 
 // === Product Sync Services ===
 
@@ -56,6 +63,174 @@ export const getProductById = async (id: string): Promise<Product | undefined> =
   }
 };
 
+
+// === Customer Sync Services ===
+
+export const registerCustomer = async (
+  customerData: Omit<Customer, 'id' | 'loyaltyPoints' | 'createdAt' | 'updatedAt' | 'memberCode'> & { memberCode?: string, branchId?: string }
+): Promise<Customer> => {
+  console.log('[SyncService] registerCustomer initiated with data:', customerData);
+  const now = new Date().toISOString();
+  const newCustomer: Customer = {
+    id: uuidv4(),
+    name: customerData.name,
+    phone: customerData.phone,
+    email: customerData.email,
+    memberCode: customerData.memberCode || `MC-${Date.now().toString().slice(-6)}`, // Auto-generate if not provided
+    loyaltyPoints: 0,
+    address: customerData.address,
+    createdAt: now,
+    updatedAt: now,
+    branchId: customerData.branchId // Can be undefined
+  };
+
+  try {
+    const dbSavedCustomer = customerRepository.dbAddCustomer(newCustomer);
+    console.log('[SyncService] Customer saved to local DB:', dbSavedCustomer);
+
+    // Async API call
+    mockApi.createCustomer(customerData) // Pass original data for API (which doesn't have the local ID)
+      .then(apiCustomer => {
+        console.log('[SyncService] API createCustomer success:', apiCustomer);
+        // Potentially update local customer with API ID or mark as synced
+      })
+      .catch(async (err) => {
+        console.error('[SyncService] API createCustomer error, adding to queue:', err);
+        try {
+          // Queue with the full customer object saved locally (includes local ID)
+          await syncQueueManager.addToQueue('CREATE_CUSTOMER', dbSavedCustomer, dbSavedCustomer.id);
+        } catch (qErr) {
+          console.error(`[SyncService] Failed to add CREATE_CUSTOMER (ID: ${dbSavedCustomer.id}) to queue:`, qErr);
+        }
+      });
+
+    return dbSavedCustomer;
+  } catch (error) {
+    console.error('[SyncService] Error saving customer to local DB:', error);
+    throw error;
+  }
+};
+
+export const findCustomer = async (identifier: string): Promise<Customer | undefined> => {
+  console.log(`[SyncService] findCustomer initiated for identifier: ${identifier}`);
+  try {
+    // Try finding by phone first, then by member code
+    let customer = customerRepository.dbGetCustomerByPhone(identifier);
+    if (!customer) {
+      customer = customerRepository.dbGetCustomerByMemberCode(identifier);
+    }
+    // Could also add search by name if identifier is not numeric/specific format
+    // For now, this primarily targets phone/memberCode
+
+    // Optionally, sync with API if not found locally or if data is stale (more advanced)
+    // if (!customer) {
+    //   const apiCustomers = await mockApi.fetchCustomers(identifier);
+    //   if (apiCustomers.length > 0) {
+    //      customer = apiCustomers[0]; // Assume first match is best for now
+    //      customerRepository.dbAddCustomer(customer); // Cache it
+    //   }
+    // }
+    console.log(`[SyncService] findCustomer from DB for identifier: ${identifier}`, customer ? 'Found' : 'Not Found');
+    return customer;
+  } catch (error) {
+    console.error(`[SyncService] Error in findCustomer for identifier: ${identifier}:`, error);
+    throw error;
+  }
+};
+
+export const getCustomers = async (searchQuery?: string, branchId?: string): Promise<Customer[]> => {
+    console.log(`[SyncService] getCustomers initiated. Query: "${searchQuery}", Branch: ${branchId}`);
+    try {
+        // For now, primarily rely on local DB.
+        // Could implement logic to fetch from API and update local DB if needed.
+        const customers = customerRepository.dbGetAllCustomers({ searchQuery, branchId });
+        console.log(`[SyncService] getCustomers from DB successful, count: ${customers.length}`);
+        return customers;
+    } catch (error) {
+        console.error('[SyncService] Error in getCustomers:', error);
+        throw error;
+    }
+};
+
+
+export const updateCustomerDetails = async (
+  customerId: string,
+  data: Partial<Omit<Customer, 'id' | 'loyaltyPoints' | 'createdAt' | 'updatedAt'>>
+): Promise<Customer | undefined> => {
+  console.log(`[SyncService] updateCustomerDetails for ID: ${customerId} with data:`, data);
+  const customerUpdateDataWithTimestamp = { ...data, updatedAt: new Date().toISOString() };
+  try {
+    const updatedDbCustomer = customerRepository.dbUpdateCustomer(customerId, customerUpdateDataWithTimestamp);
+    if (updatedDbCustomer) {
+      console.log('[SyncService] Customer updated in local DB:', updatedDbCustomer);
+      mockApi.updateCustomer(customerId, data) // Pass original data for API
+        .then(apiCust => console.log('[SyncService] API updateCustomer success:', apiCust))
+        .catch(async (err) => {
+          console.error(`[SyncService] API updateCustomer error for ID ${customerId}, adding to queue:`, err);
+          try {
+            await syncQueueManager.addToQueue('UPDATE_CUSTOMER', data, customerId);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add UPDATE_CUSTOMER (ID: ${customerId}) to queue:`, qErr);
+          }
+        });
+    } else {
+      console.warn(`[SyncService] Customer ID ${customerId} not found in local DB for update.`);
+    }
+    return updatedDbCustomer;
+  } catch (error) {
+    console.error(`[SyncService] Error updating customer in local DB (ID: ${customerId}):`, error);
+    throw error;
+  }
+};
+
+export const addLoyaltyPointsForSale = async (customerId: string, saleAmount: number): Promise<boolean> => {
+  console.log(`[SyncService] addLoyaltyPointsForSale for customer ${customerId}, sale amount ${saleAmount}`);
+  if (saleAmount <= 0 || LOYALTY_AMOUNT_FOR_POINTS <= 0) {
+    return false; // No points for zero/negative sale or invalid config
+  }
+
+  const pointsToAdd = Math.floor(saleAmount / LOYALTY_AMOUNT_FOR_POINTS) * LOYALTY_POINTS_PER_AMOUNT;
+  if (pointsToAdd <= 0) {
+    console.log('[SyncService] No loyalty points to add for this sale amount.');
+    return false;
+  }
+
+  try {
+    const customer = customerRepository.dbGetCustomerById(customerId);
+    if (!customer) {
+      console.error(`[SyncService] Customer ${customerId} not found for adding loyalty points.`);
+      return false;
+    }
+
+    const newPointsTotal = customer.loyaltyPoints + pointsToAdd;
+    const successInDb = customerRepository.dbUpdateCustomerLoyaltyPoints(customerId, newPointsTotal, new Date().toISOString());
+
+    if (successInDb) {
+      console.log(`[SyncService] Updated loyalty points for ${customerId} to ${newPointsTotal} in DB.`);
+      // Async API call
+      mockApi.updateCustomerLoyaltyPointsApi(customerId, newPointsTotal)
+        .then(apiCust => console.log(`[SyncService] API updateCustomerLoyaltyPoints success for ${customerId}:`, apiCust))
+        .catch(async (err) => {
+          console.error(`[SyncService] API updateCustomerLoyaltyPoints error for ${customerId}, adding to queue:`, err);
+          try {
+            // The payload for the queue should be what the API expects or what the queue processor needs.
+            // Here, it's the new total points.
+            await syncQueueManager.addToQueue('UPDATE_CUSTOMER_LOYALTY', { customerId, newPointsTotal }, customerId);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add UPDATE_CUSTOMER_LOYALTY (ID: ${customerId}) to queue:`, qErr);
+          }
+        });
+      return true;
+    } else {
+      console.error(`[SyncService] Failed to update loyalty points for ${customerId} in DB.`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`[SyncService] Error adding loyalty points for customer ${customerId}:`, error);
+    throw error; // Or return false
+  }
+};
+
 export const addProduct = async (productData: Omit<Product, 'id' | 'branchId'> & { branchId?: string }): Promise<Product> => {
   console.log('[SyncService] addProduct initiated with data:', productData);
 
@@ -75,10 +250,22 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'branchId'> &
     const dbSavedProduct = productRepository.dbAddProduct(localProduct);
     console.log('[SyncService] Product saved to local DB:', dbSavedProduct);
 
-    // Asynchronously try to sync with the mock API (fire-and-forget for now)
-    mockApi.createProduct(productData) // Pass original Omit<Product,'id'> data
-      .then(apiProduct => console.log('[SyncService] API createProduct success:', apiProduct))
-      .catch(err => console.error('[SyncService] API createProduct error:', err));
+    // Asynchronously try to sync with the mock API
+    mockApi.createProduct(productData) // Pass original data for API (without local ID)
+      .then(apiProduct => {
+        console.log('[SyncService] API createProduct success:', apiProduct);
+        // Optionally, update localProduct with apiProduct.id if they differ and it's important
+        // Or mark localProduct as synced if the API version is considered canonical
+      })
+      .catch(async (err) => { // Make catch async
+        console.error('[SyncService] API createProduct error, adding to queue:', err);
+        try {
+          // Queue the operation with the locally saved product data (which includes the local ID)
+          await syncQueueManager.addToQueue('CREATE_PRODUCT', localProduct, localProduct.id);
+        } catch (qErr) {
+          console.error('[SyncService] Failed to add CREATE_PRODUCT to queue:', qErr);
+        }
+      });
 
     return dbSavedProduct; // Return product from DB (with local ID)
   } catch (error) {
@@ -96,7 +283,15 @@ export const editProduct = async (productId: string, productUpdateData: Partial<
       // Async API call
       mockApi.updateProduct(productId, productUpdateData)
         .then(apiProduct => console.log('[SyncService] API updateProduct success:', apiProduct))
-        .catch(err => console.error('[SyncService] API updateProduct error:', err));
+        .catch(async (err) => {
+          console.error(`[SyncService] API updateProduct error for ID ${productId}, adding to queue:`, err);
+          try {
+            // Queue the update operation. Payload should be the intended update data.
+            await syncQueueManager.addToQueue('UPDATE_PRODUCT', productUpdateData, productId);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add UPDATE_PRODUCT (ID: ${productId}) to queue:`, qErr);
+          }
+        });
     } else {
       console.warn(`[SyncService] Product ID ${productId} not found in local DB for update.`);
     }
@@ -116,7 +311,16 @@ export const removeProduct = async (productId: string): Promise<boolean> => {
       // Async API call
       mockApi.deleteProduct(productId)
         .then(apiSuccess => console.log(`[SyncService] API deleteProduct for ID ${productId} success: ${apiSuccess}`))
-        .catch(err => console.error(`[SyncService] API deleteProduct for ID ${productId} error:`, err));
+        .catch(async (err) => {
+          console.error(`[SyncService] API deleteProduct error for ID ${productId}, adding to queue:`, err);
+          try {
+            // For delete, payload might be minimal or just the ID if API designed that way.
+            // Here, we queue the entityId, and the queue processor knows it's a delete.
+            await syncQueueManager.addToQueue('DELETE_PRODUCT', { id: productId }, productId);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add DELETE_PRODUCT (ID: ${productId}) to queue:`, qErr);
+          }
+        });
     } else {
       console.warn(`[SyncService] Product ID ${productId} not found in local DB for deletion.`);
     }
@@ -151,9 +355,15 @@ export const submitSale = async (saleData: Invoice): Promise<Invoice> => {
         invoiceRepository.dbUpdateInvoiceSyncStatus(dbSavedInvoice.id, true);
         console.log(`[SyncService] Updated sync status for invoice ID ${dbSavedInvoice.id} to true.`);
       })
-      .catch(err => {
-        console.error('[SyncService] API recordSale error:', err);
-        // Keep synced as false. A background process could retry later.
+      .catch(async (err) => { // Make catch async
+        console.error('[SyncService] API recordSale error, adding to queue:', err);
+        // The invoice is already in DB, marked as synced: false.
+        // We queue the operation to attempt submitting this specific invoice again.
+        try {
+          await syncQueueManager.addToQueue('SUBMIT_SALE', dbSavedInvoice, dbSavedInvoice.id);
+        } catch (qErr) {
+          console.error(`[SyncService] Failed to add SUBMIT_SALE (ID: ${dbSavedInvoice.id}) to queue:`, qErr);
+        }
       });
 
     return dbSavedInvoice; // Return invoice from DB
