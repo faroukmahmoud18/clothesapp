@@ -126,6 +126,9 @@ const enTranslations = {
     failedToDeleteProduct: "Failed to delete product. Please try again.",
     failedToUpdateProduct: "Failed to update product. Please try again.",
     failedToSaveProduct: "Failed to save product. Please try again.",
+    productDeleteSuccess: "Product '{{name}}' was deleted successfully.",
+    productUpdateSuccess: "Product '{{name}}' was updated successfully.",
+    productCreateSuccess: "Product '{{name}}' was created successfully.",
     // Reports Page specific
     reportsPageTitle: "System Reports",
     dailySalesReportButton: "Daily Sales",
@@ -409,6 +412,9 @@ const arTranslations = {
     failedToDeleteProduct: "فشل حذف المنتج. يرجى المحاولة مرة أخرى.",
     failedToUpdateProduct: "فشل تحديث المنتج. يرجى المحاولة مرة أخرى.",
     failedToSaveProduct: "فشل حفظ المنتج. يرجى المحاولة مرة أخرى.",
+    productDeleteSuccess: "تم حذف المنتج '{{name}}' بنجاح.",
+    productUpdateSuccess: "تم تحديث المنتج '{{name}}' بنجاح.",
+    productCreateSuccess: "تم إنشاء المنتج '{{name}}' بنجاح.",
     // Reports Page specific (Arabic)
     reportsPageTitle: "تقارير النظام",
     dailySalesReportButton: "مبيعات اليوم",
