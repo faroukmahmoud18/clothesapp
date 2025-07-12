@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/authStore'; // To get current user/branch 
 // import CustomerFormDialog from '@/customers/components/CustomerFormDialog'; // No longer directly used by POSPage header button
 import SelectCustomerDialog from '@/customers/components/SelectCustomerDialog'; // Import SelectCustomerDialog
 import { Customer } from '@/customers/types'; // Import Customer type
+import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
 
 // DiscountDialog component (can be moved to a separate file later if it grows)
 interface DiscountDialogProps {
@@ -91,6 +92,10 @@ const DiscountDialog: React.FC<DiscountDialogProps> = ({ isOpen, setIsOpen, onAp
 
 const POSPage: React.FC = () => {
   const { t } = useTranslation();
+
+  const canApplyItemDiscount = usePermission(PERMISSIONS.CAN_APPLY_ITEM_DISCOUNT);
+  const canApplyInvoiceDiscount = usePermission(PERMISSIONS.CAN_APPLY_INVOICE_DISCOUNT);
+
   const [searchTerm, setSearchTerm] = React.useState('');
   const [barcodeInputValue, setBarcodeInputValue] = React.useState('');
   const barcodeInputRef = React.useRef<HTMLInputElement>(null);
@@ -389,8 +394,14 @@ const POSPage: React.FC = () => {
                         <TableCell className="text-right py-1.5 text-xs">{item.transactionPrice.toFixed(2)}</TableCell>
                         <TableCell className="text-right py-1.5 text-xs">{item.lineTotal.toFixed(2)}</TableCell>
                         <TableCell className="p-1 text-center space-x-0.5">
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500 hover:text-blue-600" onClick={() => { setDiscountTarget({ type: 'item', itemId: item.id, itemName: item.name }); setIsDiscountDialogOpen(true); }}> <TagIcon className="h-4 w-4" /> </Button>
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive/80" onClick={() => removeItemFromCart(item.id)}> <Trash2Icon className="h-4 w-4" /> </Button>
+                          {canApplyItemDiscount && (
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500 hover:text-blue-600" onClick={() => { setDiscountTarget({ type: 'item', itemId: item.id, itemName: item.name }); setIsDiscountDialogOpen(true); }} title={t('applyDiscount')}>
+                              <TagIcon className="h-4 w-4" />
+                           </Button>
+                          )}
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive/80" onClick={() => removeItemFromCart(item.id)} title={t('removeItem')}>
+                              <Trash2Icon className="h-4 w-4" />
+                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -413,9 +424,14 @@ const POSPage: React.FC = () => {
 
                 {/* Invoice Discount Section */}
                 <div className="flex justify-between items-center w-full text-sm">
-                  <Button variant="link" className="p-0 h-auto text-blue-500" onClick={() => { setDiscountTarget({ type: 'invoice' }); setIsDiscountDialogOpen(true); }}>
-                    {invoiceDiscountType ? t('editInvoiceDiscount') : t('addInvoiceDiscount')}
-                  </Button>
+                  {canApplyInvoiceDiscount ? (
+                    <Button variant="link" className="p-0 h-auto text-blue-500" onClick={() => { setDiscountTarget({ type: 'invoice' }); setIsDiscountDialogOpen(true); }}>
+                      {invoiceDiscountType ? t('editInvoiceDiscount') : t('addInvoiceDiscount')}
+                    </Button>
+                  ) : (
+                    // Render a placeholder or nothing if user cannot apply invoice discount
+                    <span>{t('invoiceDiscountLabel')}</span> // Add translation
+                  )}
                   {calculatedInvoiceDiscountAmount > 0 && (
                      <span className="text-destructive">
                        (-{calculatedInvoiceDiscountAmount.toFixed(2)})
