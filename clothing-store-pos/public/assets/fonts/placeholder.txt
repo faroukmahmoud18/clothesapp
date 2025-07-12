@@ -1,0 +1,3 @@
+Please add a .ttf font file with Arabic support to this directory.
+For example, download 'NotoSansArabic-Regular.ttf' from Google Fonts and place it here.
+The application's PDF export service will expect to find this font file.
