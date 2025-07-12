@@ -73,6 +73,8 @@ export interface Invoice {
   invoiceDiscountAmount?: number; // Discount applied to the whole invoice
   taxTotal: number; // Total tax for the invoice
   grandTotal: number; // Final amount due
+  pointsRedeemed?: number; // Number of points used in this transaction
+  pointsRedeemedValue?: number; // The monetary value of the points redeemed
   paymentMethods: Array<{ method: PaymentMethod; amount: number }>;
   amountPaid: number;
   changeDue?: number;

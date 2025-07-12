@@ -27,6 +27,13 @@ const enTranslations = {
     posSearchPlaceholder: "Search products by name, SKU, or barcode...",
     selectCustomer: "Select Customer", // Will be replaced by addOrSelectCustomer
     addOrSelectCustomer: "Add/Select Customer",
+    redeemPointsLabel: "Redeem Loyalty Points",
+    availablePoints: "Available: {{count}} points",
+    pointsApplied: "{{count}} points applied (-{{value}})",
+    removeButton: "Remove",
+    enterPointsPlaceholder: "Enter points...",
+    applyButton: "Apply",
+    loyaltyDiscountLabel: "Loyalty Discount",
     posSettings: "POS Settings",
     products: "Products",
     currentOrder: "Current Order",
@@ -237,6 +244,11 @@ const enTranslations = {
     importResultWithErrors: "{{errors}} products had issues during import.",
     errorDuringImport: "An error occurred during the import process: {{message}}",
   },
+  loyalty: {
+    invalidPoints: "Please enter a valid number of points.",
+    insufficientPoints: "Customer does not have enough points.",
+    pointsExceedTotal: "The value of points cannot exceed the grand total.",
+  },
   productImportValidation: { // Namespace for product import validation errors
     skuRequired: "SKU is required.",
     nameRequired: "Name is required.",
@@ -260,6 +272,7 @@ const enTranslations = {
     grandTotalLabel: "TOTAL:",
     paymentMethodLabel: "Paid by",
     changeDueLabel: "Change:",
+    loyaltyDiscountReceiptLabel: "Loyalty Discount ({{count}} pts)",
   },
   printerErrors: { // Namespace for printer errors
     noPrinterFoundError: "No ESC/POS printer found. Please check connections.",
@@ -295,6 +308,13 @@ const arTranslations = {
     posSearchPlaceholder: "ابحث عن المنتجات بالاسم أو الرمز أو الباركود...",
     selectCustomer: "اختر العميل", // Will be replaced
     addOrSelectCustomer: "إضافة/اختيار عميل",
+    redeemPointsLabel: "استبدال نقاط الولاء",
+    availablePoints: "المتاح: {{count}} نقطة",
+    pointsApplied: "تم تطبيق {{count}} نقطة (-{{value}})",
+    removeButton: "إزالة",
+    enterPointsPlaceholder: "أدخل النقاط...",
+    applyButton: "تطبيق",
+    loyaltyDiscountLabel: "خصم الولاء",
     posSettings: "إعدادات نقطة البيع",
     products: "المنتجات",
     currentOrder: "الطلب الحالي",
@@ -504,6 +524,11 @@ const arTranslations = {
     importResultWithErrors: "{{errors}} منتجات واجهت مشاكل أثناء الاستيراد.",
     errorDuringImport: "حدث خطأ أثناء عملية الاستيراد: {{message}}",
   },
+  loyalty: { // Arabic
+    invalidPoints: "يرجى إدخال عدد صالح من النقاط.",
+    insufficientPoints: "العميل لا يملك نقاط كافية.",
+    pointsExceedTotal: "قيمة النقاط لا يمكن أن تتجاوز المجموع الكلي.",
+  },
   productImportValidation: { // Arabic
     skuRequired: "رمز SKU مطلوب.",
     nameRequired: "اسم المنتج مطلوب.",
@@ -527,6 +552,7 @@ const arTranslations = {
     grandTotalLabel: "الإجمالي:",
     paymentMethodLabel: "مدفوع بواسطة",
     changeDueLabel: "الباقي:",
+    loyaltyDiscountReceiptLabel: "خصم ولاء ({{count}} نقطة)",
   },
   printerErrors: { // Namespace for printer errors (Arabic)
     noPrinterFoundError: "لم يتم العثور على طابعة ESC/POS. يرجى التحقق من التوصيلات.",

@@ -95,6 +95,8 @@ const initializeDatabaseSchema = (db: Database.Database) => {
       invoiceDiscountAmount REAL DEFAULT 0,
       taxTotal REAL NOT NULL,
       grandTotal REAL NOT NULL,
+      pointsRedeemed INTEGER,
+      pointsRedeemedValue REAL,
       paymentMethods TEXT NOT NULL, -- JSON array of { method: PaymentMethod; amount: number }
       amountPaid REAL NOT NULL,
       changeDue REAL DEFAULT 0,

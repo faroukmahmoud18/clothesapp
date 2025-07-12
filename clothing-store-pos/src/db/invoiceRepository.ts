@@ -16,6 +16,8 @@ const rowToInvoice = (row: any): Invoice => {
       invoiceDiscountAmount: row.invoiceDiscountAmount !== null ? Number(row.invoiceDiscountAmount) : undefined,
       taxTotal: Number(row.taxTotal),
       grandTotal: Number(row.grandTotal),
+      pointsRedeemed: row.pointsRedeemed !== null ? Number(row.pointsRedeemed) : undefined,
+      pointsRedeemedValue: row.pointsRedeemedValue !== null ? Number(row.pointsRedeemedValue) : undefined,
       amountPaid: Number(row.amountPaid),
       changeDue: row.changeDue !== null ? Number(row.changeDue) : undefined,
       synced: Boolean(row.synced), // Convert 0/1 from SQLite to boolean
@@ -33,12 +35,12 @@ export const dbAddInvoice = (invoice: Invoice): Invoice => {
   const stmt = db.prepare(`
     INSERT INTO invoices (
       id, items, subtotal, invoiceDiscountAmount, taxTotal, grandTotal,
-      paymentMethods, amountPaid, changeDue, createdAt, cashierId,
-      branchId, customerId, status, synced
+      pointsRedeemed, pointsRedeemedValue, paymentMethods, amountPaid,
+      changeDue, createdAt, cashierId, branchId, customerId, status, synced
     ) VALUES (
       @id, @items, @subtotal, @invoiceDiscountAmount, @taxTotal, @grandTotal,
-      @paymentMethods, @amountPaid, @changeDue, @createdAt, @cashierId,
-      @branchId, @customerId, @status, @synced
+      @pointsRedeemed, @pointsRedeemedValue, @paymentMethods, @amountPaid,
+      @changeDue, @createdAt, @cashierId, @branchId, @customerId, @status, @synced
     )
   `);
 
@@ -53,6 +55,8 @@ export const dbAddInvoice = (invoice: Invoice): Invoice => {
       createdAt: createdAtISO,
       synced: invoice.synced ? 1 : 0, // Convert boolean to integer for SQLite
       invoiceDiscountAmount: invoice.invoiceDiscountAmount ?? null,
+      pointsRedeemed: invoice.pointsRedeemed ?? null,
+      pointsRedeemedValue: invoice.pointsRedeemedValue ?? null,
       changeDue: invoice.changeDue ?? null,
       cashierId: invoice.cashierId ?? null,
       branchId: invoice.branchId ?? null,
