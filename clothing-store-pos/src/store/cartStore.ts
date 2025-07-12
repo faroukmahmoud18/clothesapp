@@ -19,6 +19,8 @@ interface CartState {
   invoiceDiscountValue: number;
   invoiceDiscountAmount: number; // Calculated overall invoice discount amount
   activeCustomerId: string | null; // For associating sale with a customer
+  pointsToRedeem: number;
+  redeemedPointsValue: number; // Monetary value of redeemed points
 
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
@@ -36,6 +38,8 @@ interface CartState {
   getGrandTotal: (taxRate?: number) => number;
   setActiveCustomer: (customerId: string | null) => void;
   clearActiveCustomer: () => void;
+  applyPoints: (points: number) => void;
+  removePoints: () => void;
 }
 
 const DEFAULT_TAX_RATE = 0.14; // Default 14% VAT
@@ -55,6 +59,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   invoiceDiscountValue: 0,
   invoiceDiscountAmount: 0,
   activeCustomerId: null,
+  pointsToRedeem: 0,
+  redeemedPointsValue: 0,
 
   addItem: (product, quantity = 1) => {
     set((state) => {
@@ -310,8 +316,21 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   getGrandTotal: () => {
     const subtotalAfterInvoiceDiscount = get().getSubtotalAfterInvoiceDiscount();
-    const tax = get().getTax(); // No longer takes taxRate argument
-    return subtotalAfterInvoiceDiscount + tax;
+    const tax = get().getTax();
+    const totalBeforePoints = subtotalAfterInvoiceDiscount + tax;
+    const pointsValue = get().redeemedPointsValue;
+    // Ensure grand total doesn't go below zero due to points
+    return Math.max(0, totalBeforePoints - pointsValue);
+  },
+
+  applyPoints: (points) => {
+    const { REDEMPTION_POINTS_PER_CURRENCY_UNIT, REDEMPTION_CURRENCY_UNIT_VALUE } = require('@/sync/syncService'); // Import redemption rules
+    const value = (points / REDEMPTION_POINTS_PER_CURRENCY_UNIT) * REDEMPTION_CURRENCY_UNIT_VALUE;
+    set({ pointsToRedeem: points, redeemedPointsValue: value });
+  },
+
+  removePoints: () => {
+    set({ pointsToRedeem: 0, redeemedPointsValue: 0 });
   },
 
   setActiveCustomer: (customerId: string | null) => {
@@ -323,14 +342,24 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 }));
 
-// Ensure clearCart also clears the activeCustomerId
+// Ensure clearCart also clears the activeCustomerId and points
 const originalClearCart = useCartStore.getState().clearCart;
 useCartStore.setState(state => ({
   ...state,
   clearCart: () => {
-    originalClearCart();
-    state.clearActiveCustomer(); // Call the new action
-    // Or directly: set({ activeCustomerId: null, ...other_reset_fields });
+    originalClearCart(); // This resets items, invoice discount
+    state.clearActiveCustomer(); // This resets customerId
+    state.removePoints(); // This resets points
+    // A more direct way without chaining separate actions:
+    // set({
+    //   items: [],
+    //   invoiceDiscountType: null,
+    //   invoiceDiscountValue: 0,
+    //   invoiceDiscountAmount: 0,
+    //   activeCustomerId: null,
+    //   pointsToRedeem: 0,
+    //   redeemedPointsValue: 0,
+    // });
   }
 }));
 

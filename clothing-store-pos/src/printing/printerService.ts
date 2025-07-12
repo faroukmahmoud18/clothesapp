@@ -106,6 +106,13 @@ const formatReceipt = (p: escpos.Printer, invoiceData: Invoice) => {
     p.text(formatLine(i18n.t('invoiceDiscountLabel', {ns: 'receipt', defaultValue: 'Invoice Discount:'}), `-${invoiceData.invoiceDiscountAmount.toFixed(2)} ${currency}`));
   }
   p.text(formatLine(i18n.t('taxTotalLabel', {ns: 'receipt', defaultValue: 'Tax:'}), `${invoiceData.taxTotal.toFixed(2)} ${currency}`));
+
+  // Add loyalty points redemption if it exists
+  if (invoiceData.pointsRedeemedValue && invoiceData.pointsRedeemedValue > 0) {
+    const pointsLabel = i18n.t('loyaltyDiscountReceiptLabel', {ns: 'receipt', defaultValue: 'Loyalty Discount:', count: invoiceData.pointsRedeemed});
+    p.text(formatLine(pointsLabel, `-${invoiceData.pointsRedeemedValue.toFixed(2)} ${currency}`));
+  }
+
   p.style('b').size(1,0) // Bold and slightly larger for grand total
    .text(formatLine(i18n.t('grandTotalLabel', {ns: 'receipt', defaultValue: 'Total:'}), `${invoiceData.grandTotal.toFixed(2)} ${currency}`))
    .style('normal').size(0,0);
@@ -148,6 +155,9 @@ export const printReceipt = async (invoiceData: Invoice): Promise<boolean> => {
         console.log(formatLine('Invoice Discount:', `-${invoiceData.invoiceDiscountAmount.toFixed(2)}`));
     }
     console.log(formatLine('Tax:', `${invoiceData.taxTotal.toFixed(2)}`));
+    if (invoiceData.pointsRedeemedValue && invoiceData.pointsRedeemedValue > 0) {
+        console.log(formatLine(`Loyalty Discount (${invoiceData.pointsRedeemed} pts):`, `-${invoiceData.pointsRedeemedValue.toFixed(2)}`));
+    }
     console.log(formatLine('TOTAL:', `${invoiceData.grandTotal.toFixed(2)}`));
     console.log('--------------------------------');
     invoiceData.paymentMethods.forEach(pm => {

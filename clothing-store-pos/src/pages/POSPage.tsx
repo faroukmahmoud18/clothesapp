@@ -135,6 +135,13 @@ const POSPage: React.FC = () => {
   const [activeCustomerDisplay, setActiveCustomerDisplay] = React.useState<Customer | null>(null);
   const clearActiveCustomerFromCart = useCartStore((state) => state.clearActiveCustomer);
   const setActiveCustomerInCart = useCartStore((state) => state.setActiveCustomer);
+  const { pointsToRedeem, redeemedPointsValue, applyPoints, removePoints } = useCartStore(state => ({
+    pointsToRedeem: state.pointsToRedeem,
+    redeemedPointsValue: state.redeemedPointsValue,
+    applyPoints: state.applyPoints,
+    removePoints: state.removePoints,
+  }));
+  const [pointsInputValue, setPointsInputValue] = React.useState('');
 
 
   const currentUser = useAuthStore((state) => state.currentUser); // Get current user
@@ -205,6 +212,32 @@ const POSPage: React.FC = () => {
       barcodeInputRef.current?.focus();
     }
   }, [cartItems.length === 0, isLoading]);
+
+  const handleApplyPoints = () => {
+    if (!activeCustomerDisplay) return;
+
+    const pointsToApply = parseInt(pointsInputValue, 10);
+    if (isNaN(pointsToApply) || pointsToApply <= 0) {
+      alert(t('loyalty.invalidPoints')); // Add translation
+      return;
+    }
+
+    if (pointsToApply > activeCustomerDisplay.loyaltyPoints) {
+      alert(t('loyalty.insufficientPoints')); // Add translation
+      return;
+    }
+
+    const { REDEMPTION_POINTS_PER_CURRENCY_UNIT, REDEMPTION_CURRENCY_UNIT_VALUE } = syncService;
+    const valueOfPoints = (pointsToApply / REDEMPTION_POINTS_PER_CURRENCY_UNIT) * REDEMPTION_CURRENCY_UNIT_VALUE;
+    const totalPayable = grandTotal + redeemedPointsValue; // Get total before this new redemption is applied
+
+    if (valueOfPoints > totalPayable) {
+      alert(t('loyalty.pointsExceedTotal')); // Add translation
+      return;
+    }
+
+    applyPoints(pointsToApply);
+  };
 
   const handleBarcodeScan = () => {
     if (!barcodeInputValue.trim()) return;
@@ -397,10 +430,45 @@ const POSPage: React.FC = () => {
                      <span>{subtotalAfterInvoiceDiscount.toFixed(2)}</span>
                    </div>
                  )}
-                <div className="flex justify-between w-full text-sm">
+
+                {/* Loyalty Points Redemption Section */}
+                {activeCustomerDisplay && (
+                  <div className="w-full space-y-2 pt-2 border-t border-dashed">
+                    <div className="flex justify-between items-center text-sm">
+                      <Label htmlFor="redeemPoints">{t('redeemPointsLabel')}</Label> {/* Add translation */}
+                      <span className="text-xs text-muted-foreground">{t('availablePoints', { count: activeCustomerDisplay.loyaltyPoints })}</span> {/* Add translation */}
+                    </div>
+                    {redeemedPointsValue > 0 ? (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-green-600">{t('pointsApplied', { count: pointsToRedeem, value: redeemedPointsValue.toFixed(2) })}</span> {/* Add translation */}
+                        <Button variant="link" size="xs" className="p-0 h-auto text-destructive" onClick={() => { removePoints(); setPointsInputValue(''); }}>{t('removeButton')}</Button> {/* Add translation */}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          id="redeemPoints"
+                          type="number"
+                          placeholder={t('enterPointsPlaceholder')} /* Add translation */
+                          value={pointsInputValue}
+                          onChange={(e) => setPointsInputValue(e.target.value)}
+                          className="h-8"
+                        />
+                        <Button size="sm" className="h-8" onClick={handleApplyPoints}>{t('applyButton')}</Button> {/* Add translation */}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between w-full text-sm mt-2 pt-2 border-t">
                   <span>{t('tax')} ({DEFAULT_TAX_RATE*100}%)</span>
                   <span>{tax.toFixed(2)}</span>
                 </div>
+                {redeemedPointsValue > 0 && (
+                   <div className="flex justify-between w-full text-sm text-destructive">
+                     <span>{t('loyaltyDiscountLabel')}</span> {/* Add translation */}
+                     <span>- {redeemedPointsValue.toFixed(2)}</span>
+                   </div>
+                )}
                 <div className="flex justify-between w-full text-lg font-semibold">
                   <span>{t('grandTotal')}</span>
                   <span>{grandTotal.toFixed(2)}</span>
@@ -462,28 +530,38 @@ const POSPage: React.FC = () => {
             // Required by Invoice type, ensure it's set
             status: 'completed' as 'completed' | 'pending' | 'voided' | 'parked', // Cast to satisfy type for now
             customerId: cartActiveCustomerId || undefined, // Add customerId to invoice payload
+            pointsRedeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+            pointsRedeemedValue: redeemedPointsValue > 0 ? redeemedPointsValue : undefined,
           };
 
           // Attempt to save the sale via syncService (mocked for now)
           try {
-            const savedInvoice = await syncService.submitSale(invoicePayload); // Now returns the saved invoice
+            const savedInvoice = await syncService.submitSale(invoicePayload);
             console.log("Sale submitted via syncService, Invoice Data:", JSON.stringify(savedInvoice, null, 2));
 
-            // Add loyalty points if a customer is active for the cart
-            if (cartActiveCustomerId && savedInvoice.grandTotal > 0) {
-              try {
-                const pointsAdded = await syncService.addLoyaltyPointsForSale(cartActiveCustomerId, savedInvoice.grandTotal);
-                if (pointsAdded) {
-                  console.log(`Loyalty points added for customer ${cartActiveCustomerId}`);
-                  // Optionally, refetch customer data here to update display if activeCustomerDisplay is used
-                  // For now, we assume the points are updated in DB and will reflect next time customer data is fetched.
-                } else {
-                  console.warn(`Failed to add loyalty points for customer ${cartActiveCustomerId}`);
+            // Handle loyalty points update (redemption first, then accumulation)
+            if (cartActiveCustomerId) {
+              // 1. Redeem points used in this sale
+              if (savedInvoice.pointsRedeemed && savedInvoice.pointsRedeemed > 0) {
+                try {
+                  await syncService.redeemLoyaltyPointsForSale(cartActiveCustomerId, savedInvoice.pointsRedeemed);
+                  console.log(`Points redeemed for customer ${cartActiveCustomerId}`);
+                } catch (redemptionError) {
+                  console.error(`Error redeeming loyalty points for customer ${cartActiveCustomerId}:`, redemptionError);
+                  // Decide if this should be a critical error to the user
                 }
-              } catch (loyaltyError) {
-                console.error(`Error adding loyalty points for customer ${cartActiveCustomerId}:`, loyaltyError);
+              }
+              // 2. Add points for this sale's value
+              if (savedInvoice.grandTotal > 0) {
+                try {
+                  await syncService.addLoyaltyPointsForSale(cartActiveCustomerId, savedInvoice.grandTotal);
+                  console.log(`Loyalty points added for customer ${cartActiveCustomerId}`);
+                } catch (accumulationError) {
+                  console.error(`Error adding loyalty points for customer ${cartActiveCustomerId}:`, accumulationError);
+                }
               }
             }
+
           } catch (e) {
             console.error("Failed to submit sale via syncService", e);
             alert(t('errorSubmittingSale', { message: (e as Error).message })); // Add translation

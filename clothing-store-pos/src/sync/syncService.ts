@@ -20,6 +20,8 @@ import { v4 as uuidv4 } from 'uuid'; // For generating local IDs if needed
 // === Loyalty Configuration ===
 export const LOYALTY_POINTS_PER_AMOUNT = 1; // e.g., 1 point
 export const LOYALTY_AMOUNT_FOR_POINTS = 10; // e.g., per 10 EGP spent
+export const REDEMPTION_POINTS_PER_CURRENCY_UNIT = 10; // e.g., 10 points
+export const REDEMPTION_CURRENCY_UNIT_VALUE = 1; // e.g., for 1 EGP
 
 // === Product Sync Services ===
 
@@ -228,6 +230,44 @@ export const addLoyaltyPointsForSale = async (customerId: string, saleAmount: nu
   } catch (error) {
     console.error(`[SyncService] Error adding loyalty points for customer ${customerId}:`, error);
     throw error; // Or return false
+  }
+};
+
+export const redeemLoyaltyPointsForSale = async (customerId: string, pointsToDeduct: number): Promise<boolean> => {
+  console.log(`[SyncService] redeemLoyaltyPointsForSale for customer ${customerId}, points: ${pointsToDeduct}`);
+  if (pointsToDeduct <= 0) return false;
+
+  try {
+    const customer = customerRepository.dbGetCustomerById(customerId);
+    if (!customer || customer.loyaltyPoints < pointsToDeduct) {
+      console.error(`[SyncService] Customer ${customerId} not found or has insufficient points for redemption.`);
+      return false;
+    }
+
+    const newPointsTotal = customer.loyaltyPoints - pointsToDeduct;
+    const successInDb = customerRepository.dbUpdateCustomerLoyaltyPoints(customerId, newPointsTotal, new Date().toISOString());
+
+    if (successInDb) {
+      console.log(`[SyncService] Redeemed points for ${customerId}. New total: ${newPointsTotal} in DB.`);
+      // Async API call
+      mockApi.updateCustomerLoyaltyPointsApi(customerId, newPointsTotal)
+        .then(apiCust => console.log(`[SyncService] API updateCustomerLoyaltyPoints (redemption) success for ${customerId}:`, apiCust))
+        .catch(async (err) => {
+          console.error(`[SyncService] API updateCustomerLoyaltyPoints (redemption) error for ${customerId}, adding to queue:`, err);
+          try {
+            await syncQueueManager.addToQueue('UPDATE_CUSTOMER_LOYALTY', { customerId, newPointsTotal }, customerId);
+          } catch (qErr) {
+            console.error(`[SyncService] Failed to add UPDATE_CUSTOMER_LOYALTY (redemption) for ID ${customerId} to queue:`, qErr);
+          }
+        });
+      return true;
+    } else {
+      console.error(`[SyncService] Failed to redeem loyalty points for ${customerId} in DB.`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`[SyncService] Error redeeming loyalty points for customer ${customerId}:`, error);
+    throw error;
   }
 };
 
