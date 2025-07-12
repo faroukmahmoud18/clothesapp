@@ -9,7 +9,8 @@ import { UploadCloudIcon, FileTextIcon, AlertCircleIcon } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Product } from '@/pos/types';
-// import * as syncService from '@/sync/syncService'; // Not used directly in this component for adding
+import * as syncService from '@/sync/syncService';
+import { showErrorToast, showSuccessToast, showInfoToast } from '@/lib/toast';
 
 interface ProductImportDialogProps {
   isOpen: boolean;
@@ -245,7 +246,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({ isOpen, setIs
 
   const handleImportValidatedProducts = async () => {
     if (validProductsToImport.length === 0) {
-      alert(t('productImportDialog.noValidProductsToImport')); // Add translation
+      showErrorToast('productImportDialog.noValidProductsToImport');
       return;
     }
     setIsProcessing(true); // Consider a separate isImporting state
@@ -271,7 +272,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({ isOpen, setIs
         // For now, just a general message.
         console.error("Import errors:", result.errors);
       }
-      alert(summaryMsg); // Use a more robust notification later
+      showInfoToast(summaryMsg); // Use info toast for the summary message
       // setImportSummary(summaryMsg); // If you want to display it in the dialog before closing
 
       if (onImportCompleted) onImportCompleted(); // This could trigger a list refresh

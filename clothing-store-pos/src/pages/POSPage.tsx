@@ -21,6 +21,7 @@ import { useAuthStore } from '@/store/authStore'; // To get current user/branch 
 import SelectCustomerDialog from '@/customers/components/SelectCustomerDialog'; // Import SelectCustomerDialog
 import { Customer } from '@/customers/types'; // Import Customer type
 import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
+import { showErrorToast, showSuccessToast } from '@/lib/toast'; // Import toast service
 
 // DiscountDialog component (can be moved to a separate file later if it grows)
 interface DiscountDialogProps {
@@ -42,8 +43,7 @@ const DiscountDialog: React.FC<DiscountDialogProps> = ({ isOpen, setIsOpen, onAp
       setIsOpen(false);
       setDiscountValue(''); // Reset for next use
     } else {
-      // Basic validation feedback
-      alert(t('invalidDiscountValue'));
+      showErrorToast('invalidDiscountValue');
     }
   };
 
@@ -223,12 +223,12 @@ const POSPage: React.FC = () => {
 
     const pointsToApply = parseInt(pointsInputValue, 10);
     if (isNaN(pointsToApply) || pointsToApply <= 0) {
-      alert(t('loyalty.invalidPoints')); // Add translation
+      showErrorToast('loyalty.invalidPoints');
       return;
     }
 
     if (pointsToApply > activeCustomerDisplay.loyaltyPoints) {
-      alert(t('loyalty.insufficientPoints')); // Add translation
+      showErrorToast('loyalty.insufficientPoints');
       return;
     }
 
@@ -237,7 +237,7 @@ const POSPage: React.FC = () => {
     const totalPayable = grandTotal + redeemedPointsValue; // Get total before this new redemption is applied
 
     if (valueOfPoints > totalPayable) {
-      alert(t('loyalty.pointsExceedTotal')); // Add translation
+      showErrorToast('loyalty.pointsExceedTotal');
       return;
     }
 
@@ -254,8 +254,7 @@ const POSPage: React.FC = () => {
       addItemToCart(productFound, 1); // addItemToCart handles existing items by incrementing quantity
       setBarcodeInputValue(''); // Clear input after successful scan
     } else {
-      // TODO: Implement a more user-friendly notification (e.g., toast)
-      alert(t('productNotFoundWithBarcode', { barcode: scannedBarcode }));
+      showErrorToast('productNotFoundWithBarcode', { barcode: scannedBarcode });
       // Optionally, clear the input or let user correct it
       // setBarcodeInputValue('');
     }
@@ -580,12 +579,12 @@ const POSPage: React.FC = () => {
 
           } catch (e) {
             console.error("Failed to submit sale via syncService", e);
-            alert(t('errorSubmittingSale', { message: (e as Error).message })); // Add translation
+            showErrorToast('errorSubmittingSale', { message: (e as Error).message });
             // Decide if this failure should prevent receipt printing or clearing cart
             // For now, we'll proceed to print attempt and clear cart.
           }
 
-          alert(t('saleCompletedSuccessfully') + `\nInvoice ID: ${invoicePayload.id}`); // Simple feedback
+          showSuccessToast('saleCompletedSuccessfully', {id: invoicePayload.id});
 
           // Attempt to print receipt
           setPrintingStatus('printing');
@@ -611,12 +610,12 @@ const POSPage: React.FC = () => {
               // TODO: Show "Receipt printed" message briefly
             } else {
               setPrintingStatus('error');
-              alert(t('printerErrors.printingFailedError')); // Generic error
+              showErrorToast('printerErrors.printingFailedError');
             }
           } catch (error) {
             console.error("Printing error:", error);
             setPrintingStatus('error');
-            alert(t('printerErrors.printingFailedError'));
+            showErrorToast('printerErrors.printingFailedError');
           } finally {
             // TODO: Reset printing status to 'idle' after a delay or user action for feedback messages
             // setTimeout(() => setPrintingStatus('idle'), 3000);
@@ -691,7 +690,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, setIsOpen, totalA
     if (selectedMethod === PaymentMethod.CASH) {
       const tendered = parseFloat(amountTendered);
       if (isNaN(tendered) || tendered < totalAmount) {
-        alert(t('amountTenderedTooLow')); // Basic validation
+        showErrorToast('amountTenderedTooLow');
         return;
       }
       paymentDetails = {

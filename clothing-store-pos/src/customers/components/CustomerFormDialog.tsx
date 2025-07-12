@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Customer } from '@/customers/types';
 import * as syncService from '@/sync/syncService';
 import { useAuthStore } from '@/store/authStore';
+import { showErrorToast, showSuccessToast } from '@/lib/toast'; // Import toast service
 
 interface CustomerFormDialogProps {
   isOpen: boolean;
@@ -62,7 +63,8 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
     setError(null);
 
     if (!formData.name.trim() || !formData.phone.trim()) {
-      setError(t('customerForm.errorNamePhoneRequired')); // Add translation
+      showErrorToast('customerForm.errorNamePhoneRequired');
+      setError(t('customerForm.errorNamePhoneRequired'));
       return;
     }
     // Basic phone validation (e.g., mostly digits, certain length) could be added
@@ -82,19 +84,24 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
       if (onCustomerRegistered) {
         onCustomerRegistered(newCustomer);
       }
-      alert(t('customerForm.successRegistered', { name: newCustomer.name })); // Add translation
+      showSuccessToast('customerForm.successRegistered', { name: newCustomer.name });
     } catch (err: any) {
       setIsSaving(false);
       console.error("Failed to register customer:", err);
+      let errorMessageKey = 'customerForm.errorGeneric';
+      let errorOptions: any = { message: err.message };
+
       // Check for unique constraint errors (e.g., phone already exists)
       if (err.message && err.message.toLowerCase().includes('unique constraint failed: customers.phone')) {
-        setError(t('customerForm.errorPhoneExists', { phone: formData.phone })); // Add translation
+        errorMessageKey = 'customerForm.errorPhoneExists';
+        errorOptions = { phone: formData.phone };
       } else if (err.message && formData.memberCode && err.message.toLowerCase().includes('unique constraint failed: customers.membercode')) {
-        setError(t('customerForm.errorMemberCodeExists', { memberCode: formData.memberCode })); // Add translation
+        errorMessageKey = 'customerForm.errorMemberCodeExists';
+        errorOptions = { memberCode: formData.memberCode };
       }
-      else {
-        setError(t('customerForm.errorGeneric', { message: err.message })); // Add translation
-      }
+
+      showErrorToast(errorMessageKey, errorOptions);
+      setError(t(errorMessageKey, errorOptions)); // Also update the static error display
     }
   };
 

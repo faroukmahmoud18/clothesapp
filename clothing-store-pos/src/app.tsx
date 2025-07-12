@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
 import { usePermission, PERMISSIONS } from '@/auth/permissions';
+import { Toaster } from 'react-hot-toast'; // Import Toaster
 
 // InventoryPage is now in its own file. This placeholder can be removed.
 
@@ -128,9 +129,30 @@ const App: React.FC = () => {
   }, []); // Empty dependency array ensures this runs once on mount
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+    <>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          // Define default options
+          className: '',
+          duration: 5000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          // Default options for specific types
+          success: {
+            duration: 3000,
+            theme: {
+              primary: 'green',
+              secondary: 'black',
+            },
+          },
+        }}
+      />
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route
           path="/*"

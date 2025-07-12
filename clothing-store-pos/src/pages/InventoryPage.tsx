@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import JsBarcode from 'jsbarcode'; // Import JsBarcode
 import { Barcode as BarcodeIconLucide } from 'lucide-react'; // For button icon
 import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
+import { showErrorToast, showSuccessToast } from '@/lib/toast'; // Import toast service
 
 const ITEMS_PER_PAGE = 10;
 
@@ -74,7 +75,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
     e.preventDefault();
     // Basic validation can be added here
     if (!formData.name || !formData.sku || !formData.category) {
-        alert(t('fillRequiredFields')); // Example: "Please fill all required fields."
+        showErrorToast('fillRequiredFields');
         return;
     }
     onSave(productToEdit ? { ...formData, id: productToEdit.id } : formData);
@@ -300,13 +301,13 @@ const InventoryPage: React.FC = () => {
                             const success = await syncService.removeProduct(product.id);
                             if (success) {
                               setProducts(prev => prev.filter(p => p.id !== product.id));
-                              // Optionally, add a success toast/notification
+                            showSuccessToast('productDeleteSuccess', { name: product.name }); // Add translation
                             } else {
-                              alert(t('failedToDeleteProduct')); // Add this translation
+                            showErrorToast('failedToDeleteProduct');
                             }
                           } catch (err) {
                             console.error("Failed to delete product:", err);
-                            alert(t('failedToDeleteProduct'));
+                          showErrorToast('failedToDeleteProduct');
                           }
                         }
                       }}
@@ -364,9 +365,9 @@ const InventoryPage: React.FC = () => {
                 setProducts(prevProducts =>
                   prevProducts.map(p => p.id === updatedProduct.id ? updatedProduct : p)
                 );
-                // Optionally, add a success toast/notification
+                showSuccessToast('productUpdateSuccess', { name: updatedProduct.name }); // Add translation
               } else {
-                alert(t('failedToUpdateProduct')); // Add this translation
+                showErrorToast('failedToUpdateProduct');
               }
             } else { // Adding new product
               // Ensure productData matches Omit<Product, 'id'>, might need to explicitly set branchId if not already there
@@ -377,13 +378,13 @@ const InventoryPage: React.FC = () => {
               }
               const newProduct = await syncService.addProduct(productPayload);
               setProducts(prevProducts => [newProduct, ...prevProducts]);
-              // Optionally, add a success toast/notification
+              showSuccessToast('productCreateSuccess', { name: newProduct.name }); // Add translation
             }
             setProductToEdit(null);
             setIsProductFormOpen(false); // Explicitly close dialog on successful save
           } catch (err) {
             console.error("Failed to save product:", err);
-            alert(t('failedToSaveProduct')); // Add this translation
+            showErrorToast('failedToSaveProduct');
           }
         }}
         productToEdit={productToEdit}
@@ -450,7 +451,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({ isOpen, setIsOpen
       setBarcodeValueToDisplay(valueToEncode);
       setShowBarcodeDisplay(true);
     } else {
-      alert(t('noBarcodeOrSku')); // Add this translation
+      showErrorToast('noBarcodeOrSku');
     }
   };
 
