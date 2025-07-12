@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input'; // For date inputs
 import { Label } from '@/components/ui/label'; // For date input labels
 import * as syncService from '@/sync/syncService';
-import { DailySalesReportData, SalesSummaryReportData, CurrentInventoryReportData } from '@/reports/types';
+import * as exportService from '@/reports/exportService'; // Import export service
+import { DailySalesReportData, SalesSummaryReportData, CurrentInventoryReportData, PaymentMethodSummary } from '@/reports/types'; // Import PaymentMethodSummary
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // For displaying data
 import { useAuthStore } from '@/store/authStore'; // To get current branch for filtering
+import { FileDownIcon } from 'lucide-react'; // For export buttons
 
 // Helper to format date to YYYY-MM-DD for input type="date"
 const formatDateForInput = (date: Date): string => {
@@ -71,6 +73,81 @@ const ReportsPage: React.FC = () => {
 
   // Effect to fetch report when activeReport or relevant dates change
   // We'll call handleFetchReport via a button click instead of auto-running on date change for now.
+
+  const handleExportToExcel = () => {
+    if (!reportData || !activeReport) return;
+
+    let dataToExport: any[] = [];
+    const fileName = `${activeReport}_${new Date().toISOString().split('T')[0]}`;
+
+    if(activeReport === 'dailySales' || activeReport === 'salesSummary') {
+      const data = reportData as SalesSummaryReportData;
+      // Flatten data for Excel
+      dataToExport = [
+        { Metric: t('totalSales'), Value: data.totalGrossSales.toFixed(2) },
+        { Metric: t('totalNetSales'), Value: data.totalNetSales.toFixed(2) },
+        { Metric: t('totalInvoices'), Value: data.totalInvoices },
+        { Metric: t('totalItemsSold'), Value: data.totalItemsSold },
+        { Metric: t('totalDiscounts'), Value: data.totalDiscounts.toFixed(2) },
+        { Metric: t('totalTax'), Value: data.totalTax.toFixed(2) },
+        {}, // Spacer row
+        { Metric: t('paymentMethodsBreakdown') },
+        ...data.paymentMethodBreakdown.map(pm => ({
+          Metric: t(pm.method, { ns: 'paymentMethods', defaultValue: pm.method }),
+          Value: pm.totalAmount.toFixed(2),
+          Transactions: pm.count,
+        })),
+      ];
+    } else if (activeReport === 'inventory') {
+      const data = reportData as CurrentInventoryReportData;
+      dataToExport = data.items.map(item => ({
+        [t('sku')]: item.sku,
+        [t('productName')]: item.name,
+        [t('category')]: item.category,
+        [t('stockQuantity')]: item.stockQuantity,
+        [t('purchasePriceOptional')]: item.purchasePrice.toFixed(2),
+        [t('sellingPrice')]: item.sellingPrice.toFixed(2),
+        [t('totalValueCost')]: item.totalValueAtCost.toFixed(2),
+        [t('totalValueSelling')]: item.totalValueAtSellingPrice.toFixed(2),
+      }));
+    }
+
+    exportService.exportToExcel(dataToExport, fileName);
+  };
+
+  const handleExportToPdf = () => {
+    if (!reportData || !activeReport) return;
+
+    const title = t(`${activeReport}ReportTitle`);
+    const fileName = `${active_report}_${new Date().toISOString().split('T')[0]}`;
+    let headers: string[] = [];
+    let body: any[][] = [];
+
+    if(activeReport === 'dailySales' || activeReport === 'salesSummary') {
+      const data = reportData as SalesSummaryReportData;
+      // For PDF, we can create a summary section and then tables
+      // For simplicity here, we'll create a table for payment methods
+      headers = [t('paymentMethod'), t('totalAmount'), t('transactionCount')];
+      body = data.paymentMethodBreakdown.map(pm => [
+        t(pm.method, { ns: 'paymentMethods', defaultValue: pm.method }),
+        pm.totalAmount.toFixed(2),
+        pm.count
+      ]);
+      // TODO: Add summary KPIs to PDF body as well
+    } else if (activeReport === 'inventory') {
+      const data = reportData as CurrentInventoryReportData;
+      headers = [t('sku'), t('productName'), t('stockQuantity'), t('totalValueCost')];
+      body = data.items.map(item => [
+        item.sku,
+        item.name,
+        item.stockQuantity,
+        item.totalValueAtCost.toFixed(2),
+      ]);
+    }
+
+    exportService.exportToPdf(title, headers, body, fileName);
+  };
+
   // useEffect(() => {
   //   if (activeReport) {
   //     handleFetchReport();
@@ -258,7 +335,19 @@ const ReportsPage: React.FC = () => {
       <section>
         {activeReport ? (
           <Card>
-            <CardHeader><CardTitle>{t(`${activeReport}ReportTitle`)}</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{t(`${activeReport}ReportTitle`)}</CardTitle>
+              {reportData && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleExportToExcel} disabled={isLoading}>
+                    <FileDownIcon className="mr-2 h-4 w-4"/> {t('exportToExcelButton')}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExportToPdf} disabled={isLoading}>
+                    <FileDownIcon className="mr-2 h-4 w-4"/> {t('exportToPdfButton')}
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
             <CardContent>
               {renderReportContent()}
             </CardContent>

@@ -151,6 +151,8 @@ const enTranslations = {
     generateReportButton: "Generate Report",
     dateFrom: "Date From",
     dateTo: "Date To",
+    exportToExcelButton: "Export to Excel",
+    exportToPdfButton: "Export to PDF",
     // Report Tables
     paymentMethod: "Payment Method",
     totalAmount: "Total Amount",
@@ -417,6 +419,8 @@ const arTranslations = {
     generateReportButton: "إنشاء التقرير",
     dateFrom: "التاريخ من",
     dateTo: "التاريخ إلى",
+    exportToExcelButton: "تصدير إلى Excel",
+    exportToPdfButton: "تصدير إلى PDF",
     // Report Tables (Arabic)
     paymentMethod: "طريقة الدفع",
     totalAmount: "المبلغ الإجمالي",
