@@ -6,6 +6,12 @@ import { UserRole } from "./mockAuth"; // Assuming UserRole is in mockAuth.ts
 // These are examples and should be expanded based on application features
 export const PERMISSIONS = {
   // POS Permissions
+  // Page / Module View Permissions
+  VIEW_POS: 'pos:view',
+  VIEW_INVENTORY: 'inventory:view',
+  VIEW_REPORTS: 'reports:view',
+
+  // POS Permissions
   CAN_PROCESS_SALE: 'pos:process_sale',
   CAN_APPLY_ITEM_DISCOUNT: 'pos:apply_item_discount',
   CAN_APPLY_INVOICE_DISCOUNT: 'pos:apply_invoice_discount',
@@ -78,6 +84,9 @@ export const roleToActionPermissions: Record<UserRole, Permission[]> = {
     ...Object.values(PERMISSIONS),
   ],
   [UserRole.BRAND_OWNER]: [
+    PERMISSIONS.VIEW_POS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.CAN_PROCESS_SALE,
     PERMISSIONS.CAN_APPLY_ITEM_DISCOUNT,
     PERMISSIONS.CAN_APPLY_INVOICE_DISCOUNT,
@@ -114,6 +123,9 @@ export const roleToActionPermissions: Record<UserRole, Permission[]> = {
     PERMISSIONS.CAN_COMPARE_BRANCH_PERFORMANCE,
   ],
   [UserRole.BRANCH_MANAGER]: [
+    PERMISSIONS.VIEW_POS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.CAN_PROCESS_SALE,
     PERMISSIONS.CAN_APPLY_ITEM_DISCOUNT,
     PERMISSIONS.CAN_APPLY_INVOICE_DISCOUNT,
@@ -139,6 +151,7 @@ export const roleToActionPermissions: Record<UserRole, Permission[]> = {
     PERMISSIONS.CAN_REDEEM_LOYALTY_POINTS,
   ],
   [UserRole.CASHIER]: [
+    PERMISSIONS.VIEW_POS,
     PERMISSIONS.CAN_PROCESS_SALE,
     PERMISSIONS.CAN_APPLY_ITEM_DISCOUNT,
     PERMISSIONS.CAN_APPLY_INVOICE_DISCOUNT, // With limits?
@@ -149,6 +162,7 @@ export const roleToActionPermissions: Record<UserRole, Permission[]> = {
     PERMISSIONS.CAN_REDEEM_LOYALTY_POINTS,
   ],
   [UserRole.WAREHOUSE_MANAGER]: [
+    PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.CAN_CREATE_PRODUCT, // Or only receive?
     PERMISSIONS.CAN_EDIT_PRODUCT,
     PERMISSIONS.CAN_VIEW_PRODUCT_COST_PRICE,
@@ -160,11 +174,13 @@ export const roleToActionPermissions: Record<UserRole, Permission[]> = {
     PERMISSIONS.CAN_MANAGE_CATEGORIES, // If central warehouse
   ],
   [UserRole.WAREHOUSE_STAFF]: [
+    PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.CAN_RECEIVE_STOCK,
     PERMISSIONS.CAN_PERFORM_STOCKTAKE, // Assist
     PERMISSIONS.CAN_PRINT_BARCODES, // For received items
   ],
   [UserRole.ACCOUNTANT]: [
+    PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.CAN_VIEW_SALES_REPORTS,
     PERMISSIONS.CAN_VIEW_INVENTORY_REPORTS, // For valuation
     PERMISSIONS.CAN_VIEW_FINANCIAL_REPORTS,
@@ -187,15 +203,20 @@ export const userHasPermission = (role: UserRole | undefined, permission: Permis
   return userPermissions.includes(permission);
 };
 
-// Example of a hook to use in components:
-// import { useAuthStore } from '@/store/authStore';
-// import { Permission, userHasPermission } from '@/auth/permissions';
-//
-// export const usePermission = (permission: Permission) => {
-//   const currentUser = useAuthStore((state) => state.currentUser);
-//   return userHasPermission(currentUser?.role, permission);
-// };
-//
+/**
+ * A React hook to check if the current user has a specific permission.
+ * @param permission The permission to check for.
+ * @returns True if the user is authenticated and has the permission, false otherwise.
+ */
+import { useAuthStore } from "@/store/authStore";
+
+export const usePermission = (permission: Permission): boolean => {
+  const currentUser = useAuthStore((state) => state.currentUser);
+  if (!currentUser) return false;
+  return userHasPermission(currentUser.role, permission);
+};
+
+
 // Usage in a component:
 // const canCreate = usePermission(PERMISSIONS.CAN_CREATE_PRODUCT);
 // if (canCreate) { /* render button */ }

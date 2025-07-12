@@ -14,6 +14,7 @@ import ReportsPage from '@/pages/ReportsPage'; // Import ReportsPage
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
+import { usePermission, PERMISSIONS } from '@/auth/permissions';
 
 // InventoryPage is now in its own file. This placeholder can be removed.
 
@@ -24,6 +25,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const logout = useAuthStore((state) => state.logout);
   const currentUser = useAuthStore((state) => state.currentUser);
   const navigate = useNavigate();
+
+  // Permissions for navigation links
+  const canViewPos = usePermission(PERMISSIONS.VIEW_POS);
+  const canViewInventory = usePermission(PERMISSIONS.VIEW_INVENTORY);
+  const canViewReports = usePermission(PERMISSIONS.VIEW_REPORTS);
 
   const {
     isSyncing,
@@ -60,9 +66,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <nav className="p-4 bg-primary text-primary-foreground shadow-md">
           <div className="container mx-auto flex justify-between items-center">
             <ul className="flex space-x-4 items-center">
-              <li><Link to="/pos" className="hover:text-secondary-foreground">{t('pos')}</Link></li>
-              <li><Link to="/inventory" className="hover:text-secondary-foreground">{t('inventory')}</Link></li>
-              <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li>
+              {canViewPos && <li><Link to="/pos" className="hover:text-secondary-foreground">{t('pos')}</Link></li>}
+              {canViewInventory && <li><Link to="/inventory" className="hover:text-secondary-foreground">{t('inventory')}</Link></li>}
+              {canViewReports && <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li>}
             </ul>
             <div className="flex items-center space-x-2"> {/* Reduced space-x for tighter group */}
               {/* Sync Status & Button */}

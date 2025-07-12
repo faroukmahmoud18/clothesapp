@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import JsBarcode from 'jsbarcode'; // Import JsBarcode
 import { Barcode as BarcodeIconLucide } from 'lucide-react'; // For button icon
+import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,9 +24,10 @@ interface ProductFormDialogProps {
   setIsOpen: (open: boolean) => void;
   onSave: (productData: Omit<Product, 'id'> | Product) => void; // Omit id for new, Product for edit
   productToEdit?: Product | null;
+  canViewCostPrice: boolean; // Prop to control visibility of cost price field
 }
 
-const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen, onSave, productToEdit }) => {
+const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen, onSave, productToEdit, canViewCostPrice }) => {
   const { t } = useTranslation();
   const initialFormData: Omit<Product, 'id'> = {
     name: '', sku: '', category: '', purchasePrice: 0, sellingPrice: 0,
@@ -111,7 +113,9 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
           </div>
           <div><Label htmlFor="barcode">{t('barcodeOptional')}</Label><Input id="barcode" name="barcode" value={formData.barcode || ''} onChange={handleChange} className={commonInputClass} /></div>
           <div><Label htmlFor="sellingPrice">{t('sellingPrice')}</Label><Input id="sellingPrice" name="sellingPrice" type="number" value={formData.sellingPrice} onChange={handleChange} required min="0" step="0.01" className={commonInputClass} /></div>
-          <div><Label htmlFor="purchasePrice">{t('purchasePriceOptional')}</Label><Input id="purchasePrice" name="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} min="0" step="0.01" className={commonInputClass} /></div>
+          {canViewCostPrice && (
+            <div><Label htmlFor="purchasePrice">{t('purchasePriceOptional')}</Label><Input id="purchasePrice" name="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} min="0" step="0.01" className={commonInputClass} /></div>
+          )}
           <div><Label htmlFor="stockQuantity">{t('stockQuantity')}</Label><Input id="stockQuantity" name="stockQuantity" type="number" value={formData.stockQuantity} onChange={handleChange} required min="0" step="1" className={commonInputClass} /></div>
           <div><Label htmlFor="lowStockThreshold">{t('lowStockThresholdOptional')}</Label><Input id="lowStockThreshold" name="lowStockThreshold" type="number" value={formData.lowStockThreshold || 0} onChange={handleChange} min="0" step="1" className={commonInputClass} /></div>
           <div>
@@ -135,6 +139,11 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
 
 const InventoryPage: React.FC = () => {
   const { t } = useTranslation();
+
+  const canImportProducts = usePermission(PERMISSIONS.CAN_IMPORT_PRODUCTS);
+  const canCreateProduct = usePermission(PERMISSIONS.CAN_CREATE_PRODUCT);
+  const canEditProduct = usePermission(PERMISSIONS.CAN_EDIT_PRODUCT);
+  const canDeleteProduct = usePermission(PERMISSIONS.CAN_DELETE_PRODUCT);
 
   const [products, setProducts] = useState<Product[]>([]); // Initialize with empty array
   const [isLoading, setIsLoading] = useState(true); // Add loading state
@@ -200,14 +209,18 @@ const InventoryPage: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('inventoryManagement')}</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-            <UploadIcon className="mr-2 h-4 w-4" />
-            {t('importProducts')}
-          </Button>
-          <Button onClick={() => { setProductToEdit(null); setIsProductFormOpen(true); }}>
-            <PlusCircleIcon className="mr-2 h-4 w-4" />
-            {t('addNewProduct')}
-          </Button>
+          {canImportProducts && (
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+              <UploadIcon className="mr-2 h-4 w-4" />
+              {t('importProducts')}
+            </Button>
+          )}
+          {canCreateProduct && (
+            <Button onClick={() => { setProductToEdit(null); setIsProductFormOpen(true); }}>
+              <PlusCircleIcon className="mr-2 h-4 w-4" />
+              {t('addNewProduct')}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -263,40 +276,44 @@ const InventoryPage: React.FC = () => {
                 </TableCell>
                 <TableCell className="text-center">{product.lowStockThreshold || '-'}</TableCell>
                 <TableCell className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="mr-1 h-8 w-8"
-                    onClick={() => {
-                      setProductToEdit(product);
-                      setIsProductFormOpen(true);
-                    }}
-                  >
-                    <Edit2Icon className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive/80 h-8 w-8"
-                    onClick={async () => { // Make async
-                      if (confirm(t('confirmDeleteProduct', { productName: product.name }))) {
-                        try {
-                          const success = await syncService.removeProduct(product.id);
-                          if (success) {
-                            setProducts(prev => prev.filter(p => p.id !== product.id));
-                            // Optionally, add a success toast/notification
-                          } else {
-                            alert(t('failedToDeleteProduct')); // Add this translation
+                  {canEditProduct && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="mr-1 h-8 w-8"
+                      onClick={() => {
+                        setProductToEdit(product);
+                        setIsProductFormOpen(true);
+                      }}
+                    >
+                      <Edit2Icon className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDeleteProduct && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive/80 h-8 w-8"
+                      onClick={async () => { // Make async
+                        if (confirm(t('confirmDeleteProduct', { productName: product.name }))) {
+                          try {
+                            const success = await syncService.removeProduct(product.id);
+                            if (success) {
+                              setProducts(prev => prev.filter(p => p.id !== product.id));
+                              // Optionally, add a success toast/notification
+                            } else {
+                              alert(t('failedToDeleteProduct')); // Add this translation
+                            }
+                          } catch (err) {
+                            console.error("Failed to delete product:", err);
+                            alert(t('failedToDeleteProduct'));
                           }
-                        } catch (err) {
-                          console.error("Failed to delete product:", err);
-                          alert(t('failedToDeleteProduct'));
                         }
-                      }
-                    }}
-                  >
-                    <Trash2Icon className="h-4 w-4" />
-                  </Button>
+                      }}
+                    >
+                      <Trash2Icon className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -370,6 +387,7 @@ const InventoryPage: React.FC = () => {
           }
         }}
         productToEdit={productToEdit}
+        canViewCostPrice={usePermission(PERMISSIONS.CAN_VIEW_PRODUCT_COST_PRICE)}
       />
       <ViewProductDialog
         isOpen={isViewDetailDialogOpen}
@@ -400,6 +418,7 @@ interface ViewProductDialogProps {
 
 const ViewProductDialog: React.FC<ViewProductDialogProps> = ({ isOpen, setIsOpen, product }) => {
   const { t } = useTranslation();
+  const canViewCostPrice = usePermission(PERMISSIONS.CAN_VIEW_PRODUCT_COST_PRICE);
   const barcodeRef = React.useRef<SVGSVGElement>(null);
   const [showBarcodeDisplay, setShowBarcodeDisplay] = useState(false);
   const [barcodeValueToDisplay, setBarcodeValueToDisplay] = useState<string | null>(null);
@@ -463,7 +482,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({ isOpen, setIsOpen
               {detailItem('category', product.category)}
               {detailItem('barcodeOptional', product.barcode)}
               {detailItem('sellingPrice', `${t('currencyEGP')} ${product.sellingPrice.toFixed(2)}`)}
-              {detailItem('purchasePriceOptional', `${t('currencyEGP')} ${product.purchasePrice.toFixed(2)}`)}
+            {canViewCostPrice && detailItem('purchasePriceOptional', `${t('currencyEGP')} ${product.purchasePrice.toFixed(2)}`)}
               {detailItem('stockQuantity', product.stockQuantity)}
               {detailItem('lowStockThresholdOptional', product.lowStockThreshold)}
               {detailItem('taxRatePercentage', product.taxRate)}
