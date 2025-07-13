@@ -34,6 +34,7 @@
     "escpos": "^3.0.0-alpha.6",
     "escpos-usb": "^3.0.0-alpha.4",
     "express": "^5.1.0",
+    "googleapis": "^152.0.0",
     "i18next": "^25.3.2",
     "i18next-browser-languagedetector": "^8.2.0",
     "jsbarcode": "^3.12.1",
