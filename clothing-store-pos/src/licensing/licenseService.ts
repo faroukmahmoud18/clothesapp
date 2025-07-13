@@ -1,17 +1,29 @@
-import { showWarningToast } from '@/lib/toast';
-
-const MOCK_LICENSE_KEY = 'VALID-LICENSE-KEY';
-const MOCK_EXPIRY_DATE = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 days from now
+import { showWarningToast, showErrorToast } from '@/lib/toast';
 
 export const checkLicense = async (): Promise<{ isValid: boolean; expiryDate: Date | null }> => {
-  // In a real application, this would involve an API call to a licensing server.
-  // For now, we'll use a mock implementation.
   const licenseKey = localStorage.getItem('licenseKey');
-  if (licenseKey === MOCK_LICENSE_KEY) {
-    const expiryDate = new Date(localStorage.getItem('licenseExpiry') || MOCK_EXPIRY_DATE);
-    return { isValid: true, expiryDate };
+  if (!licenseKey) {
+    return { isValid: false, expiryDate: null };
   }
-  return { isValid: false, expiryDate: null };
+
+  try {
+    const response = await fetch('http://localhost:3001/validate-license', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ licenseKey }),
+    });
+    const data = await response.json();
+    if (data.isValid) {
+      localStorage.setItem('licenseExpiry', data.expiryDate);
+    }
+    return data;
+  } catch (error) {
+    console.error('Failed to validate license:', error);
+    showErrorToast('Failed to validate license. Please check your internet connection.');
+    return { isValid: false, expiryDate: null };
+  }
 };
 
 export const handleLicenseExpiry = (expiryDate: Date) => {
