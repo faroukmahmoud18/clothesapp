@@ -52,32 +52,13 @@ export const processQueue = async (): Promise<{ successCount: number; failureCou
           apiCallSuccessful = true;
           break;
         case 'SUBMIT_SALE':
-          const saleApiResult = await mockApi.recordSale(item.payload as any); // payload is Invoice
+          await mockApi.recordSale(item.payload as any); // payload is Invoice
           // After successful API call for SUBMIT_SALE, update the original invoice's sync status
-          if (saleApiResult && item.entityId) { // entityId should be invoice.id for SUBMIT_SALE
-            // This part needs careful thought: invoiceRepository isn't directly accessible here without import.
-            // For now, let's assume success implies the original invoice should be marked synced.
-            // A better way would be for processQueue to return info, and syncService updates the invoice.
-            // Or, the queue item for SUBMIT_SALE could be a special type that triggers invoice sync status update.
-            // Let's assume for now, the responsibility of updating invoice.synced is handled after mockApi.recordSale
-            // by the original caller (syncService.submitSale) if it were not fire-and-forget.
-            // Given current fire-and-forget, if SUBMIT_SALE queue item succeeds, the original local invoice is still 'synced:false'.
-            // This needs refinement.
-            // For this milestone, a successful SUBMIT_SALE from queue means the API got it.
-            // The local invoice's `synced` flag update logic might be better in `syncService.submitSale` itself after API success.
-            // If an item of type SUBMIT_SALE is processed here successfully, it means the API call succeeded.
-            // The local Invoice's `synced` flag should have been updated by the original `syncService.submitSale` if the API call succeeded there.
-            // If it failed there and was queued, then this successful processing means we should update the local Invoice.
-            // This implies `syncQueueManager` might need to interact with other repositories or emit events.
-            // To simplify for now: if `mockApi.recordSale` succeeds, we assume the data is on the "server".
-            // The local `Invoice.synced` flag update is tricky if this is a generic queue processor.
-            // Let's assume a successful `SUBMIT_SALE` here means the API call was successful.
-            // The `invoiceRepository.dbUpdateInvoiceSyncStatus` should be called.
-             console.log(`[SyncQueueManager] SUBMIT_SALE for invoice ${item.entityId} processed by API.`);
-             // We need a way to update the original invoice. This could be a specific task for SUBMIT_SALE type.
-             // For now, we'll just log and remove from queue. The invoice itself remains synced=false locally if it was queued.
-             // This is a limitation of the current simple queue processor.
-            apiCallSuccessful = true;
+          if (item.entityId) { // entityId should be invoice.id for SUBMIT_SALE
+            const invoiceRepository = await import('@/db/invoiceRepository');
+            invoiceRepository.dbUpdateInvoiceSyncStatus(item.entityId, true);
+          }
+          apiCallSuccessful = true;
           break;
         case 'CREATE_CUSTOMER':
           await mockApi.createCustomer(item.payload);
@@ -111,9 +92,13 @@ export const processQueue = async (): Promise<{ successCount: number; failureCou
       }
     } catch (error: any) {
       console.error(`[SyncQueueManager] Error processing item ID: ${item.id} (Type: ${item.type}):`, error);
+      const MAX_RETRIES = 5;
+      const newAttempts = item.attempts + 1;
+      const newStatus = newAttempts >= MAX_RETRIES ? 'FAILED' : 'PENDING';
+
       syncQueueRepository.dbUpdateQueueItem(item.id, {
-        status: 'FAILED',
-        attempts: item.attempts + 1,
+        status: newStatus,
+        attempts: newAttempts,
         lastAttemptAt: new Date().toISOString(),
         errorDetails: error.message || 'Unknown error during processing',
       });
