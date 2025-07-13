@@ -16,6 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
 import { usePermission, PERMISSIONS } from '@/auth/permissions';
 import { Toaster } from 'react-hot-toast'; // Import Toaster
+import { checkLicense, handleLicenseExpiry } from '@/licensing/licenseService';
 
 // InventoryPage is now in its own file. This placeholder can be removed.
 
@@ -116,6 +117,16 @@ const App: React.FC = () => {
       console.log('[App] Initializing database connection...');
       getDb(); // This will initialize the DB and schema if not already done
       console.log('[App] Database connection checked/initialized.');
+
+      const checkAndHandleLicense = async () => {
+        const license = await checkLicense();
+        if (license.isValid && license.expiryDate) {
+          handleLicenseExpiry(license.expiryDate);
+        } else {
+          // Handle invalid license
+        }
+      };
+      checkAndHandleLicense();
     } catch (error) {
       console.error('[App] Failed to initialize database on app load:', error);
       // TODO: Show a critical error message to the user, as the app might not function.
