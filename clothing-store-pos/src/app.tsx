@@ -12,6 +12,7 @@ import POSPage from '@/pages/POSPage';
 import InventoryPage from '@/pages/InventoryPage'; // Import InventoryPage from its new file
 import ReportsPage from '@/pages/ReportsPage'; // Import ReportsPage
 import BackupPage from '@/pages/BackupPage';
+import LicensePage from '@/pages/LicensePage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
@@ -68,6 +69,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {canViewInventory && <li><Link to="/inventory" className="hover:text-secondary-foreground">{t('inventory')}</Link></li>}
               {canViewReports && <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li>}
               <li><Link to="/backup" className="hover:text-secondary-foreground">{t('backup')}</Link></li>
+              <li><Link to="/license" className="hover:text-secondary-foreground">{t('license')}</Link></li>
             </ul>
             <div className="flex items-center space-x-2"> {/* Reduced space-x for tighter group */}
               {/* Sync Status & Button */}
@@ -191,6 +193,7 @@ const App: React.FC = () => {
                     requiredRoles={[UserRole.SUPER_ADMIN]}
                   />}
                 />
+                <Route path="/license" element={<LicensePage />} />
                 {/* Add other protected routes here */}
                 <Route path="/" element={<Navigate to="/pos" replace />} /> {/* Default authenticated route */}
                 <Route path="*" element={<div><h2>404 Not Found</h2><Link to="/">Go Home</Link></div>} />
