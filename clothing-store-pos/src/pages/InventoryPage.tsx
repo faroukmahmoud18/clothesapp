@@ -8,6 +8,7 @@ import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, Triangle
 // Remove direct import of mockProducts, will be fetched via service
 import { mockProductTypes } from '@/pos/mockData'; // Keep mockProductTypes for form dropdown for now
 import { Product, ProductType } from '@/pos/types'; // Import ProductType
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as syncService from '@/sync/syncService'; // Import syncService
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Dialog components
 import { Label } from "@/components/ui/label";
@@ -101,20 +102,18 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({ isOpen, setIsOpen
           <div><Label htmlFor="category">{t('category')}</Label><Input id="category" name="category" value={formData.category} onChange={handleChange} required className={commonInputClass} /></div>
           <div>
             <Label htmlFor="productTypeId">{t('productType')}</Label> {/* Add this translation */}
-            <select
-              id="productTypeId"
-              name="productTypeId"
-              value={formData.productTypeId || ''}
-              onChange={handleChange}
-              className={commonInputClass}
-            >
-              <option value="" disabled>{t('selectProductType')}</option> {/* Add this translation */}
-              {mockProductTypes.map((pt) => (
-                <option key={pt.id} value={pt.id}>
-                  {pt.name} ({pt.taxRate * 100}%)
-                </option>
-              ))}
-            </select>
+            <Select onValueChange={(value) => setFormData(prev => ({ ...prev, productTypeId: value }))} value={formData.productTypeId || ''}>
+              <SelectTrigger className={commonInputClass}>
+                <SelectValue placeholder={t('selectProductType')} />
+              </SelectTrigger>
+              <SelectContent>
+                {mockProductTypes.map((pt) => (
+                  <SelectItem key={pt.id} value={pt.id}>
+                    {pt.name} ({pt.taxRate * 100}%)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div><Label htmlFor="barcode">{t('barcodeOptional')}</Label><Input id="barcode" name="barcode" value={formData.barcode || ''} onChange={handleChange} className={commonInputClass} /></div>
           <div><Label htmlFor="sellingPrice">{t('sellingPrice')}</Label><Input id="sellingPrice" name="sellingPrice" type="number" value={formData.sellingPrice} onChange={handleChange} required min="0" step="0.01" className={commonInputClass} /></div>

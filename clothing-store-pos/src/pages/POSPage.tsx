@@ -136,6 +136,7 @@ const POSPage: React.FC = () => {
     activeCustomerId: state.activeCustomerId,
   }));
   const [printingStatus, setPrintingStatus] = React.useState<'idle' | 'printing' | 'success' | 'error'>('idle');
+  const [paymentProcessing, setPaymentProcessing] = React.useState(false);
 
   // Customer related state
   const [isSelectCustomerDialogOpen, setIsSelectCustomerDialogOpen] = React.useState(false);
@@ -521,6 +522,7 @@ const POSPage: React.FC = () => {
         setIsOpen={setIsPaymentDialogOpen}
         totalAmount={grandTotal}
         onConfirmPayment={async (paymentDetails) => { // Made async
+          setPaymentProcessing(true);
           // Basic Invoice Generation
           const invoicePayload = { // Renamed to avoid conflict with Invoice type if imported directly
             id: `INV-${Date.now()}`, // Simple unique ID
@@ -631,6 +633,7 @@ const POSPage: React.FC = () => {
 
           clearCart();
           setIsPaymentDialogOpen(false);
+          setPaymentProcessing(false);
           barcodeInputRef.current?.focus(); // Focus barcode input for next sale
         }}
       />
@@ -793,8 +796,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, setIsOpen, totalA
         </div>
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>
-          <Button onClick={handleConfirm} disabled={isConfirmDisabled()}>
-            {t('confirmPayment')}
+          <Button onClick={handleConfirm} disabled={isConfirmDisabled() || paymentProcessing}>
+            {paymentProcessing ? t('processing') : t('confirmPayment')}
           </Button>
         </DialogFooter>
       </DialogContent>
