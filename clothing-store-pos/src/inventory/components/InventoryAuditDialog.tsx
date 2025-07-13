@@ -46,10 +46,12 @@ const InventoryAuditDialog: React.FC<InventoryAuditDialogProps> = ({ isOpen, set
     setBarcode('');
   };
 
-  const handleSaveAudit = () => {
-    // Here you would typically save the audit results to the database.
-    // This is a placeholder for that functionality.
-    console.log('Audit results:', scannedProducts);
+  const handleSaveAudit = async () => {
+    const auditData = Array.from(scannedProducts.values()).map(({ product, scannedQuantity }) => ({
+      productId: product.id,
+      scannedQuantity,
+    }));
+    await syncService.saveInventoryAudit(auditData);
     onAuditComplete();
     setIsOpen(false);
   };

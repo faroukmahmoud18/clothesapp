@@ -520,6 +520,21 @@ export const getPointHistory = async (customerId: string): Promise<any[]> => {
   ];
 };
 
+export const saveInventoryAudit = async (auditData: { productId: string, scannedQuantity: number }[]): Promise<void> => {
+  // This is a mock implementation. In a real application, you would save this data to the database.
+  console.log('Saving inventory audit:', auditData);
+};
+
+export const createStockTransfer = async (transferData: { fromBranch: string, toBranch: string, products: { productId: string, quantity: number }[] }): Promise<void> => {
+  // This is a mock implementation. In a real application, you would save this data to the database.
+  console.log('Creating stock transfer:', transferData);
+};
+
+export const getSlowMovingProducts = async (days: number): Promise<Product[]> => {
+  // This is a mock implementation. In a real application, you would fetch this data from the database.
+  return [];
+};
+
 export const getSalesSummaryReport = async (
   dateFrom: string, // Expected format 'YYYY-MM-DD' or full ISO string
   dateTo: string,   // Expected format 'YYYY-MM-DD' or full ISO string

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Product } from '@/pos/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TriangleAlertIcon } from 'lucide-react';
+import * as syncService from '@/sync/syncService';
 
 interface InventoryAlertsProps {
   products: Product[];
@@ -13,8 +14,15 @@ const InventoryAlerts: React.FC<InventoryAlertsProps> = ({ products }) => {
 
   const lowStockProducts = products.filter(p => p.stockQuantity <= (p.lowStockThreshold || 0));
 
-  // For now, slow-moving products are not implemented. This is a placeholder.
-  const slowMovingProducts: Product[] = [];
+  const [slowMovingProducts, setSlowMovingProducts] = React.useState<Product[]>([]);
+
+  React.useEffect(() => {
+    const fetchSlowMovingProducts = async () => {
+      const products = await syncService.getSlowMovingProducts(30);
+      setSlowMovingProducts(products);
+    };
+    fetchSlowMovingProducts();
+  }, []);
 
   if (lowStockProducts.length === 0 && slowMovingProducts.length === 0) {
     return null;

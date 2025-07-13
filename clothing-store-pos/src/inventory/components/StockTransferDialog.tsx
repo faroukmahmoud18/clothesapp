@@ -17,10 +17,12 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({ isOpen, setIs
   const [toBranch, setToBranch] = useState('');
   const [productsToTransfer, setProductsToTransfer] = useState<{ product: Product, quantity: number }[]>([]);
 
-  const handleSaveTransfer = () => {
-    // Here you would typically save the stock transfer to the database.
-    // This is a placeholder for that functionality.
-    console.log('Stock transfer:', { fromBranch, toBranch, productsToTransfer });
+  const handleSaveTransfer = async () => {
+    await syncService.createStockTransfer({
+      fromBranch,
+      toBranch,
+      products: productsToTransfer.map(({ product, quantity }) => ({ productId: product.id, quantity })),
+    });
     onTransferComplete();
     setIsOpen(false);
   };
