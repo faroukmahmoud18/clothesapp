@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ProductImportDialog from '@/inventory/components/ProductImportDialog'; // Import the new dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, TriangleAlertIcon } from 'lucide-react'; // Added TriangleAlertIcon
+import { PlusCircleIcon, SearchIcon, UploadIcon, Edit2Icon, Trash2Icon, TriangleAlertIcon, PrinterIcon } from 'lucide-react'; // Added TriangleAlertIcon
 // Remove direct import of mockProducts, will be fetched via service
 import { mockProductTypes } from '@/pos/mockData'; // Keep mockProductTypes for form dropdown for now
 import { Product, ProductType } from '@/pos/types'; // Import ProductType
@@ -14,8 +14,12 @@ import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import JsBarcode from 'jsbarcode'; // Import JsBarcode
 import { Barcode as BarcodeIconLucide } from 'lucide-react'; // For button icon
+import BarcodePrintingDialog from '@/inventory/components/BarcodePrintingDialog';
 import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
 import { showErrorToast, showSuccessToast } from '@/lib/toast'; // Import toast service
+import InventoryAlerts from '@/inventory/components/InventoryAlerts';
+import InventoryAuditDialog from '@/inventory/components/InventoryAuditDialog';
+import StockTransferDialog from '@/inventory/components/StockTransferDialog';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -156,6 +160,10 @@ const InventoryPage: React.FC = () => {
   const [isViewDetailDialogOpen, setIsViewDetailDialogOpen] = useState(false);
   const [productToView, setProductToView] = useState<Product | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false); // State for import dialog
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [isBarcodePrintingDialogOpen, setIsBarcodePrintingDialogOpen] = useState(false);
+  const [isAuditDialogOpen, setIsAuditDialogOpen] = useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
 
 
   // Filtered and paginated products
@@ -210,6 +218,16 @@ const InventoryPage: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('inventoryManagement')}</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsAuditDialogOpen(true)}>
+            {t('inventoryAudit')}
+          </Button>
+          <Button variant="outline" onClick={() => setIsTransferDialogOpen(true)}>
+            {t('stockTransfer')}
+          </Button>
+          <Button variant="outline" onClick={() => setIsBarcodePrintingDialogOpen(true)} disabled={selectedProducts.length === 0}>
+            <PrinterIcon className="mr-2 h-4 w-4" />
+            {t('printBarcodes')} ({selectedProducts.length})
+          </Button>
           {canImportProducts && (
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <UploadIcon className="mr-2 h-4 w-4" />
@@ -224,6 +242,8 @@ const InventoryPage: React.FC = () => {
           )}
         </div>
       </header>
+
+      <InventoryAlerts products={products} />
 
       {/* Search and Filters Bar */}
       <div className="flex items-center gap-2 pb-4 border-b">
@@ -245,6 +265,19 @@ const InventoryPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedProducts(filteredProducts);
+                    } else {
+                      setSelectedProducts([]);
+                    }
+                  }}
+                  checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                />
+              </TableHead>
               <TableHead>{t('productName')}</TableHead>
               <TableHead>{t('sku')}</TableHead>
               <TableHead>{t('category')}</TableHead>
@@ -257,6 +290,19 @@ const InventoryPage: React.FC = () => {
           <TableBody>
             {paginatedProducts.map((product) => (
               <TableRow key={product.id}>
+                <TableCell>
+                  <Input
+                    type="checkbox"
+                    checked={selectedProducts.some(p => p.id === product.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedProducts(prev => [...prev, product]);
+                      } else {
+                        setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+                      }
+                    }}
+                  />
+                </TableCell>
                 <TableCell
                   className="font-medium cursor-pointer hover:underline"
                   onClick={() => {
@@ -320,7 +366,7 @@ const InventoryPage: React.FC = () => {
             ))}
             {paginatedProducts.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   {searchTerm ? t('noProductsFound') : t('noInventoryItems')}
                 </TableCell>
               </TableRow>
@@ -404,6 +450,35 @@ const InventoryPage: React.FC = () => {
           console.log("Product import process completed (or dialog closed).");
           // To refresh: (would require making fetchProductsData accessible or refactoring)
           // fetchProductsData();
+        }}
+      />
+      <BarcodePrintingDialog
+        isOpen={isBarcodePrintingDialogOpen}
+        setIsOpen={setIsBarcodePrintingDialogOpen}
+        productsToPrint={selectedProducts}
+      />
+      <InventoryAuditDialog
+        isOpen={isAuditDialogOpen}
+        setIsOpen={setIsAuditDialogOpen}
+        onAuditComplete={() => {
+          // Refresh products list after audit
+          const fetchProductsData = async () => {
+            const fetchedProducts = await syncService.getProducts();
+            setProducts(fetchedProducts);
+          };
+          fetchProductsData();
+        }}
+      />
+      <StockTransferDialog
+        isOpen={isTransferDialogOpen}
+        setIsOpen={setIsTransferDialogOpen}
+        onTransferComplete={() => {
+          // Refresh products list after transfer
+          const fetchProductsData = async () => {
+            const fetchedProducts = await syncService.getProducts();
+            setProducts(fetchedProducts);
+          };
+          fetchProductsData();
         }}
       />
     </div>
