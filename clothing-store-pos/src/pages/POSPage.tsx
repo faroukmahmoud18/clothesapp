@@ -22,6 +22,8 @@ import SelectCustomerDialog from '@/customers/components/SelectCustomerDialog'; 
 import { Customer } from '@/customers/types'; // Import Customer type
 import { usePermission, PERMISSIONS } from '@/auth/permissions'; // Import permission hook and constants
 import { showErrorToast, showSuccessToast } from '@/lib/toast'; // Import toast service
+import CustomerQRCodeDialog from '@/customers/components/CustomerQRCodeDialog';
+import PointHistoryDialog from '@/customers/components/PointHistoryDialog';
 
 // DiscountDialog component (can be moved to a separate file later if it grows)
 interface DiscountDialogProps {
@@ -147,6 +149,8 @@ const POSPage: React.FC = () => {
     removePoints: state.removePoints,
   }));
   const [pointsInputValue, setPointsInputValue] = React.useState('');
+  const [isQRCodeDialogOpen, setIsQRCodeDialogOpen] = React.useState(false);
+  const [isPointHistoryDialogOpen, setIsPointHistoryDialogOpen] = React.useState(false);
 
 
   const currentUser = useAuthStore((state) => state.currentUser); // Get current user
@@ -317,7 +321,11 @@ const POSPage: React.FC = () => {
             <span className="font-semibold">{t('activeCustomerLabel')}:</span> {activeCustomerDisplay.name} ({activeCustomerDisplay.phone})
             <span className="ml-4">{t('loyaltyPointsLabel')}: {activeCustomerDisplay.loyaltyPoints}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => clearActiveCustomerFromCart()}>{t('clearCustomerButton')}</Button>
+          <div>
+            <Button variant="outline" size="sm" onClick={() => setIsPointHistoryDialogOpen(true)}>{t('pointHistory')}</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsQRCodeDialogOpen(true)} className="ml-2">{t('showQRCode')}</Button>
+            <Button variant="ghost" size="sm" onClick={() => clearActiveCustomerFromCart()} className="ml-2">{t('clearCustomerButton')}</Button>
+          </div>
         </div>
       )}
 
@@ -637,6 +645,16 @@ const POSPage: React.FC = () => {
           console.log('Customer selected on POS page:', customer);
           // No need to call setActiveCustomerDisplay here directly, useEffect handles it.
         }}
+      />
+      <CustomerQRCodeDialog
+        isOpen={isQRCodeDialogOpen}
+        setIsOpen={setIsQRCodeDialogOpen}
+        customer={activeCustomerDisplay}
+      />
+      <PointHistoryDialog
+        isOpen={isPointHistoryDialogOpen}
+        setIsOpen={setIsPointHistoryDialogOpen}
+        customer={activeCustomerDisplay}
       />
     </div>
   );

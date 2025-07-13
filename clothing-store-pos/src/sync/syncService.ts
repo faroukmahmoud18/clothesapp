@@ -512,6 +512,14 @@ const getDayBoundaries = (dateStr: string): { startOfDay: string, endOfDay: stri
     return { startOfDay, endOfDay };
 };
 
+export const getPointHistory = async (customerId: string): Promise<any[]> => {
+  // This is a mock implementation. In a real application, you would fetch this data from the database.
+  return [
+    { date: new Date(), activity: 'Sale', points: 10 },
+    { date: new Date(), activity: 'Redemption', points: -5 },
+  ];
+};
+
 export const getSalesSummaryReport = async (
   dateFrom: string, // Expected format 'YYYY-MM-DD' or full ISO string
   dateTo: string,   // Expected format 'YYYY-MM-DD' or full ISO string
