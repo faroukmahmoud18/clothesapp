@@ -29,7 +29,7 @@ export const initializePrinter = async (): Promise<boolean> => {
     const usbDevice = USB.getDevice(); // Gets the first device found
     if (!usbDevice) {
         console.error('[PrinterService] No USB ESC/POS printer found.');
-        // alert(i18n.t('noPrinterFoundError')); // Add this translation
+        showErrorToast('noPrinterFoundError');
         return false;
     }
     device = new USB(usbDevice); // Use the found device
@@ -43,7 +43,7 @@ export const initializePrinter = async (): Promise<boolean> => {
       device.open(function(error) {
         if (error) {
           console.error('[PrinterService] Error opening USB device:', error);
-          // alert(i18n.t('printerConnectionError')); // Add this translation
+          showErrorToast('printerConnectionError');
           printer = null; // Ensure printer is null if open fails
           reject(false);
         } else {
@@ -55,7 +55,7 @@ export const initializePrinter = async (): Promise<boolean> => {
 
   } catch (error) {
     console.error('[PrinterService] Failed to initialize printer:', error);
-    // alert(i18n.t('printerInitializationError')); // Add this translation
+    showErrorToast('printerInitializationError');
     device = null;
     printer = null;
     return false;
@@ -174,7 +174,7 @@ export const printReceipt = async (invoiceData: Invoice): Promise<boolean> => {
 
   if (!printer || !device?.device) { // Also check if device is actually open/valid
     console.error('[PrinterService] Printer not initialized or device not open. Cannot print.');
-    // alert(i18n.t('printerNotReadyError')); // Add this translation
+    showErrorToast('printerNotReadyError');
     const initialized = await initializePrinter(); // Attempt to re-initialize
     if (!initialized || !printer || !device?.device) { // Check again after attempt
         console.error('[PrinterService] Re-initialization failed. Cannot print.');
@@ -189,7 +189,7 @@ export const printReceipt = async (invoiceData: Invoice): Promise<boolean> => {
       device.open(function(error) { // Ensure device is open before printing
         if (error && error.message !== 'Device already open') { // Ignore "already open"
           console.error('[PrinterService] Error opening device for printing:', error);
-          // alert(i18n.t('printerConnectionError'));
+          showErrorToast('printerConnectionError');
           return reject(false);
         }
 
@@ -206,7 +206,7 @@ export const printReceipt = async (invoiceData: Invoice): Promise<boolean> => {
       });
     } catch (err) {
       console.error('[PrinterService] Error during printing process:', err);
-      // alert(i18n.t('printingFailedError')); // Add this translation
+      showErrorToast('printingFailedError');
       reject(false);
     }
   });

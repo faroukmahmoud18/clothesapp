@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
             {/* Optional: Enter your credentials to access your account */}
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-labelledby="login-title">
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">{t('username')}</Label>
@@ -63,6 +63,7 @@ const LoginPage: React.FC = () => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
@@ -76,9 +77,10 @@ const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-required="true"
               />
             </div>
-            {error && <p className="text-sm text-destructive text-center">{error}</p>}
+            {error && <p role="alert" className="text-sm text-destructive text-center">{error}</p>}
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full">
