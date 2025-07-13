@@ -83,6 +83,7 @@ export interface Invoice {
   branchId?: string; // Branch where the sale occurred
   customerId?: string; // Optional customer linked to the sale
   status: 'pending' | 'completed' | 'voided' | 'parked';
+  synced?: boolean;
 }
 
 // For product search results or quick add

@@ -11,6 +11,9 @@ import { DailySalesReportData, SalesSummaryReportData, CurrentInventoryReportDat
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // For displaying data
 import { useAuthStore } from '@/store/authStore'; // To get current branch for filtering
 import { FileDownIcon } from 'lucide-react'; // For export buttons
+import SalesChart from '@/reports/components/SalesChart';
+import SalesForecast from '@/reports/components/SalesForecast';
+import SignaturePad from '@/reports/components/SignaturePad';
 
 // Helper to format date to YYYY-MM-DD for input type="date"
 const formatDateForInput = (date: Date): string => {
@@ -33,6 +36,7 @@ const ReportsPage: React.FC = () => {
   const [dailySaleDate, setDailySaleDate] = useState<string>(todayStr);
   const [summaryDateFrom, setSummaryDateFrom] = useState<string>(todayStr);
   const [summaryDateTo, setSummaryDateTo] = useState<string>(todayStr);
+  const [signature, setSignature] = useState<string | null>(null);
 
   const handleFetchReport = async () => {
     if (!activeReport) return;
@@ -165,6 +169,9 @@ const ReportsPage: React.FC = () => {
       return (
         <div>
           <p>{t('reportForDate', { date: data.date })}</p> {/* Add translation */}
+          <div className="mt-4">
+            <SalesChart reportData={data} />
+          </div>
           <h3 className="font-semibold text-lg mt-4 mb-2">{t('summaryMetrics')}</h3> {/* Add translation */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <Card><CardHeader><CardTitle>{t('totalSales')}</CardTitle></CardHeader><CardContent>{data.totalGrossSales.toFixed(2)} {t('currencyEGP')}</CardContent></Card>
@@ -303,6 +310,9 @@ const ReportsPage: React.FC = () => {
         <Button onClick={() => { setActiveReport('inventory'); setReportData(null); }} variant={activeReport === 'inventory' ? 'default' : 'outline'}>
           {t('inventoryReportButton')}
         </Button>
+        <Button onClick={() => { setActiveReport('salesForecast'); setReportData(null); }} variant={activeReport === 'salesForecast' ? 'default' : 'outline'}>
+          {t('salesForecastButton')}
+        </Button>
       </section>
 
       {/* Date Pickers and Filter Section */}
@@ -330,6 +340,14 @@ const ReportsPage: React.FC = () => {
          {activeReport === 'inventory' && (
              <Button onClick={handleFetchReport} className="w-fit">{t('generateReportButton')}</Button>
          )}
+         {activeReport === 'salesForecast' && (
+            <SalesForecast salesData={reportData ? [reportData as SalesSummaryReportData] : []} />
+         )}
+        {activeReport && (
+          <div className="mt-4">
+            <SignaturePad onSave={setSignature} />
+          </div>
+        )}
       </section>
 
       <section>

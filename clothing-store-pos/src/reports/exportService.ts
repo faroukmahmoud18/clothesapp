@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable'; // This is a plugin, and needs to be imported to extend jspdf
 import { UserOptions } from 'jspdf-autotable'; // For typing autotable options
+import { showSuccessToast, showErrorToast } from '@/lib/toast';
 
 // --- Excel Export ---
 
@@ -18,10 +19,10 @@ export const exportToExcel = (data: any[], fileName: string, sheetName: string =
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
     XLSX.writeFile(workbook, `${fileName}.xlsx`);
-    console.log(`[ExportService] Successfully initiated download for ${fileName}.xlsx`);
+    showSuccessToast(`Successfully exported ${fileName}.xlsx`);
   } catch (error) {
     console.error('[ExportService] Error exporting to Excel:', error);
-    // TODO: Show user-facing error message
+    showErrorToast('Error exporting to Excel.');
   }
 };
 
@@ -140,9 +141,9 @@ export const exportToPdf = async (
     });
 
     doc.save(`${fileName}.pdf`);
-    console.log(`[ExportService] Successfully initiated download for ${fileName}.pdf`);
+    showSuccessToast(`Successfully exported ${fileName}.pdf`);
   } catch (error) {
     console.error('[ExportService] Error exporting to PDF:', error);
-    // TODO: Show user-facing error message
+    showErrorToast('Error exporting to PDF.');
   }
 };
