@@ -11,6 +11,7 @@ import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import POSPage from '@/pages/POSPage';
 import InventoryPage from '@/pages/InventoryPage'; // Import InventoryPage from its new file
 import ReportsPage from '@/pages/ReportsPage'; // Import ReportsPage
+import BackupPage from '@/pages/BackupPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuthStore } from '@/store/authStore';
 import { UserRole } from '@/auth/mockAuth';
@@ -66,6 +67,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {canViewPos && <li><Link to="/pos" className="hover:text-secondary-foreground">{t('pos')}</Link></li>}
               {canViewInventory && <li><Link to="/inventory" className="hover:text-secondary-foreground">{t('inventory')}</Link></li>}
               {canViewReports && <li><Link to="/reports" className="hover:text-secondary-foreground">{t('reports')}</Link></li>}
+              <li><Link to="/backup" className="hover:text-secondary-foreground">{t('backup')}</Link></li>
             </ul>
             <div className="flex items-center space-x-2"> {/* Reduced space-x for tighter group */}
               {/* Sync Status & Button */}
@@ -181,6 +183,12 @@ const App: React.FC = () => {
                   <ProtectedRoute
                     element={<ReportsPage />}
                     requiredRoles={[UserRole.SUPER_ADMIN, UserRole.BRAND_OWNER, UserRole.BRANCH_MANAGER, UserRole.ACCOUNTANT]}
+                  />}
+                />
+                <Route path="/backup" element={
+                  <ProtectedRoute
+                    element={<BackupPage />}
+                    requiredRoles={[UserRole.SUPER_ADMIN]}
                   />}
                 />
                 {/* Add other protected routes here */}
