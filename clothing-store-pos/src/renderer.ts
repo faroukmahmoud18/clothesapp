@@ -1,13 +1,8 @@
+import './index.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './app'; // New root component
-import './index.css'; // Tailwind CSS
+import App from './app';
 
-// Render the React application
 const container = document.getElementById('root');
-if (container) {
-  const root = createRoot(container);
-  root.render(React.createElement(App));
-} else {
-  console.error('Failed to find the root element');
-}
+const root = createRoot(container!);
+root.render(<App />);
