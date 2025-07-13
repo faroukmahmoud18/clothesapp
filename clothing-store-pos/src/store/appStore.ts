@@ -12,6 +12,7 @@ interface AppState {
   setSyncError: (error: string | null) => void;
   updatePendingQueueCount: () => Promise<void>; // Action to refresh count
   triggerSync: () => Promise<void>; // Action to process the queue
+  initializeSyncInterval: () => () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -60,6 +61,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isSyncing: false });
       get().updatePendingQueueCount(); // Refresh count after sync attempt
     }
+  },
+
+  initializeSyncInterval: () => {
+    const intervalId = setInterval(() => {
+      get().triggerSync();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(intervalId);
   },
 }));
 

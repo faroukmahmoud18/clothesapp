@@ -42,14 +42,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   } = useAppStore();
 
   useEffect(() => {
-    // Update queue count periodically or on specific events if needed,
-    // for now, it updates after triggerSync and on store init.
-    // This is an example if we wanted to refresh it on interval when component is mounted:
-    // const intervalId = setInterval(() => {
-    //   updatePendingQueueCount();
-    // }, 60000); // every minute
-    // return () => clearInterval(intervalId);
-  }, [updatePendingQueueCount]);
+    const cleanup = useAppStore.getState().initializeSyncInterval();
+    return cleanup;
+  }, []);
 
 
   const changeLanguage = (lng: string) => {
